@@ -189,6 +189,7 @@ header.site-header {
 }
 
 .header-actions .btn-secondary {
+  text-decoration: none;
   background: rgba(255, 255, 255, 0.12);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.25);
@@ -196,6 +197,18 @@ header.site-header {
 .header-actions .btn-secondary:hover {
   background: rgba(255, 255, 255, 0.22);
   border-color: white;
+}
+
+
+.header-actions .btn-telegram {
+  background: rgba(36, 161, 222, 0.2);
+  border-color: rgba(36, 161, 222, 0.45);
+  color: #7dd3fc;
+}
+.header-actions .btn-telegram:hover {
+  background: rgba(36, 161, 222, 0.35);
+  border-color: #38bdf8;
+  color: white;
 }
 
 .header-actions .btn-secondary.btn-accent {
