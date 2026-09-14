@@ -12,44 +12,46 @@
 
   <!-- SITE HEADER -->
   <header class="site-header">
-    <div class="header-left">
-      <div class="polimi-logo-badge">
-        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
-        </svg>
-      </div>
-      <div class="header-titles">
-        <h1>POLITECNICO DI MILANO — Manifesto degli Studi A.A. 2025/2026</h1>
-        <div class="subtitle">
-          Corso di Laurea Magistrale in <strong>COMPUTER SCIENCE AND ENGINEERING - INGEGNERIA INFORMATICA (542)</strong> &bull; Orientamento <strong>T2A</strong>
+    <div class="header-inner">
+      <div class="header-left">
+        <div class="polimi-logo-badge">
+          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+          </svg>
+        </div>
+        <div class="header-titles">
+          <h1>POLITECNICO DI MILANO — Manifesto degli Studi A.A. 2025/2026</h1>
+          <div class="subtitle">
+            Corso di Laurea Magistrale in <strong>COMPUTER SCIENCE AND ENGINEERING - INGEGNERIA INFORMATICA (542)</strong> &bull; Orientamento <strong>T2A</strong>
+          </div>
         </div>
       </div>
-    </div>
-    
-    <div class="header-right">
-      <div class="plan-summary-pill" id="live-plan-pill" onclick="scrollToValidation()" title="Clicca per visualizzare i dettagli dei requisiti di validità del piano T2A">
-        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span>CFU: <strong id="stat-total-cfu">0.0</strong> / 120</span>
-        <span style="font-size:0.75rem; opacity:0.85;">(Extra: <span id="stat-sovrannumero-cfu">0.0</span>)</span>
-        <span id="stat-req-pill" class="req-status-pill pill-pending">Vincoli T2A: 0/8</span>
-      </div>
+      
+      <div class="header-right">
+        <div class="plan-summary-pill" id="live-plan-pill" onclick="scrollToValidation()" title="Clicca per visualizzare i dettagli dei requisiti di validità del piano T2A">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>CFU: <strong id="stat-total-cfu">0.0</strong> / 120</span>
+          <span style="font-size:0.75rem; opacity:0.85;">(Extra: <span id="stat-sovrannumero-cfu">0.0</span>)</span>
+          <span id="stat-req-pill" class="req-status-pill pill-pending">Vincoli T2A: 0/8</span>
+        </div>
 
-      <div class="header-actions">
-        <button class="btn btn-secondary" onclick="openExportModal()" title="Esporta le tue note e lo stato del piano in JSON">
-          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-          Esporta
-        </button>
-        <button class="btn btn-secondary" onclick="openImportModal()" title="Importa un salvataggio precedente di note e piano">
-          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-          Importa
-        </button>
-        <button class="btn btn-secondary" id="btn-toggle-plan" onclick="toggleOnlyPlanned(document.querySelector('.filter-pill.pill-plan'))" title="Mostra solo gli insegnamenti che hai inserito nel tuo piano">
-          ★ Nel Mio Piano
-        </button>
+        <div class="header-actions">
+          <button class="btn btn-secondary" onclick="openExportModal()" title="Esporta le tue note e lo stato del piano in JSON">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            Esporta
+          </button>
+          <button class="btn btn-secondary" onclick="openImportModal()" title="Importa un salvataggio precedente di note e piano">
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Importa
+          </button>
+          <button class="btn btn-secondary" id="btn-toggle-plan" onclick="toggleOnlyPlanned(document.querySelector('.filter-pill.pill-plan'))" title="Mostra solo gli insegnamenti che hai inserito nel tuo piano">
+            ★ Nel Mio Piano
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -225,7 +227,7 @@
           </div>
         </div>
 
-        <div class="rules-callout" style="background:#f8fafc; border:1px solid var(--slate-200); border-radius:6px; padding:0.75rem 1rem; font-size:0.775rem; color:var(--slate-600); display:flex; flex-direction:column; gap:0.35rem; margin-top:0.75rem;">
+        <div class="rules-callout">
           <div><strong>📌 Regolamento del Piano di Studi T2A:</strong> I vincoli del piano di studi possono essere verificati solo al momento della presentazione di un piano di studi completo per entrambi gli anni di corso. Dovranno essere selezionati tutti gli insegnamenti obbligatori (salvo che siano già stati sostenuti al I livello).</div>
           <div><strong>➕ Insegnamenti in Sovrannumero:</strong> Gli insegnamenti eccedenti i limiti di DOT/Soft Skills o del gruppo Etica/Progetto/Diritto possono essere inseriti come corsi in sovrannumero. <em>Nota bene:</em> di norma non è possibile convertire un esame in sovrannumero (supplementare rispetto ai 120 CFU) in esame effettivo senza la presentazione di un nuovo piano degli studi.</div>
         </div>
@@ -316,6 +318,7 @@
             <option value="sec_12">Gruppo TABELLA SWT - INF</option>
             <option value="sec_13">Gruppo TABELLA SWT - INTER</option>
             <option value="sec_14">Gruppo TEL - Telecomunicazioni</option>
+            <option value="sec_extra">Insegnamenti Aggiuntivi / Opzionali</option>
           </optgroup>
         </select>
 
@@ -342,7 +345,7 @@
         <button class="filter-pill" onclick="expandAllSections()" title="Espandi tutte le tabelle" style="border-color:#cbd5e1;">▼ Espandi Tutte</button>
         <button class="filter-pill" onclick="collapseAllSections()" title="Comprimi tutte le tabelle" style="border-color:#cbd5e1;">▲ Comprimi Tutte</button>
 
-        <div class="results-count" id="results-count">Mostrati 392 insegnamenti</div>
+        <div class="results-count" id="results-count">Mostrati 393 insegnamenti</div>
       </div>
 
       <div class="filter-pills">

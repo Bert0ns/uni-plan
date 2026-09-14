@@ -9134,5 +9134,36 @@
         "is_soft": false
       }
     ]
+  },
+  {
+    "id": "sec_extra",
+    "index": 15,
+    "title": "Insegnamenti Aggiuntivi / Opzionali",
+    "badge": "1 riga",
+    "rows": [
+      {
+        "row_id": "row-extra_0",
+        "is_choice": false,
+        "code": "054445",
+        "name": "THEORETICAL COMPUTER SCIENCE",
+        "ssd": "ING-INF/05",
+        "ssdsm": "IINF-05/A",
+        "url": "https://www.corsi.polimi.it/insegnamento/054445",
+        "lang": "🇬🇧 EN",
+        "sede": "MI",
+        "tipo": "M",
+        "period": "1° sem",
+        "cfu": "5.0",
+        "cfu_grp": "5.0",
+        "is_int1": false,
+        "is_taba": false,
+        "is_tabb": false,
+        "is_obbligatorio": false,
+        "is_ai": false,
+        "is_limit2": false,
+        "is_dot": false,
+        "is_soft": false
+      }
+    ]
   }
 ]
