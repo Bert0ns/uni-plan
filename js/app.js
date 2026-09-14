@@ -5,15 +5,43 @@ let saveTimeout = null;
 let showOnlyPlanned = false;
 let modalMode = 'export';
 
+const GROUP_TO_SECTION_MAP = {
+  '#idGruppo5596': 'sec_2',
+  '#idGruppo5597': 'sec_3',
+  '#idGruppo5598': 'sec_5',
+  '#idGruppo5599': 'sec_6',
+  '#idGruppo5600': 'sec_7',
+  '#idGruppo5601': 'sec_10',
+  '#idGruppo5602': 'sec_11',
+  '#idGruppo5603': 'sec_14',
+  '#idGruppo5604': 'sec_4',
+  '#idGruppo5605': 'sec_8',
+  '#idGruppo5683': 'sec_9',
+  '#idGruppo5758': 'sec_12',
+  '#idGruppo5759': 'sec_13',
+};
+
 // --- DATA PERSISTENCE ---
-function loadUserData() {
+async function loadUserData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       userNotesData = JSON.parse(saved);
+      return;
     }
   } catch (e) {
     console.error('Failed to load user notes from localStorage:', e);
+  }
+
+  // Fallback to pre-saved study plan if available
+  try {
+    const resp = await fetch('data/study-plan-state.json');
+    if (resp.ok) {
+      userNotesData = await resp.json();
+      saveUserData();
+    }
+  } catch (e) {
+    console.warn('Could not load data/study-plan-state.json default:', e);
     userNotesData = {};
   }
 }
@@ -25,6 +53,37 @@ function saveUserData() {
     console.error('Failed to save to localStorage:', e);
   }
   recalculateStats();
+}
+
+function sanitizeUrl(url) {
+  if (!url) return '#';
+  // Ensure unescaping any entity before passing to escapeHtml to prevent double-escaping
+  const clean = url.replace(/&amp;/g, '&');
+  return escapeHtml(clean);
+}
+
+function jumpToChoiceGroup(url) {
+  if (!url) return true;
+  const hashIdx = url.indexOf('#');
+  if (hashIdx === -1) return true;
+  const hash = url.substring(hashIdx);
+  const targetId = GROUP_TO_SECTION_MAP[hash];
+  if (!targetId) return true;
+
+  const sec = document.getElementById(targetId);
+  if (sec) {
+    if (sec.classList.contains('is-collapsed')) {
+      sec.classList.remove('is-collapsed');
+      const toggleText = sec.querySelector('.section-toggle-text');
+      if (toggleText) toggleText.textContent = 'Comprimi';
+    }
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    sec.style.transition = 'box-shadow 0.3s ease';
+    sec.style.boxShadow = '0 0 0 3px #0284c7';
+    setTimeout(() => { sec.style.boxShadow = ''; }, 2000);
+    return false;
+  }
+  return true;
 }
 
 // --- RENDER SECTIONS & TABLES ---
@@ -40,7 +99,7 @@ function renderTables() {
           <td class="center"><span style="color:var(--slate-400);">--</span></td>
           <td style="font-size:0.75rem; color:var(--slate-600);">--</td>
           <td style="font-size:0.75rem; color:var(--slate-600); font-weight:500;">--</td>
-          <td class="course-title-cell"><a href="${escapeHtml(row.url)}" class="course-title-link" target="_blank" rel="noopener">${escapeHtml(row.name)}</a></td>
+          <td class="course-title-cell"><a href="${sanitizeUrl(row.url)}" class="course-title-link" onclick="return jumpToChoiceGroup(this.getAttribute('href'))" target="_blank" rel="noopener">${escapeHtml(row.name)}</a></td>
           <td class="center">--</td>
           <td class="center" style="font-size:0.75rem; font-weight:500;">--</td>
           <td class="center" style="font-size:0.75rem; color:var(--slate-500);">--</td>
@@ -73,7 +132,7 @@ function renderTables() {
         <td style="font-size:0.75rem; color:var(--slate-600);">${escapeHtml(row.ssdsm)}</td>
         <td style="font-size:0.75rem; color:var(--slate-600); font-weight:500;">${escapeHtml(row.ssd)}</td>
         <td class="course-title-cell">
-          <a href="${escapeHtml(row.url)}" class="course-title-link" target="_blank" rel="noopener">${escapeHtml(row.name)}</a>
+          <a href="${sanitizeUrl(row.url)}" class="course-title-link" target="_blank" rel="noopener">${escapeHtml(row.name)}</a>
           ${tags.length ? `<div class="course-tags">${tags.join('')}</div>` : ''}
         </td>
         <td class="center"><span class="lang-flag">${escapeHtml(row.lang)}</span></td>
@@ -732,8 +791,8 @@ function executeModalAction() {
 }
 
 // --- APPLICATION INITIALIZATION ---
-window.addEventListener('DOMContentLoaded', () => {
-  loadUserData();
+window.addEventListener('DOMContentLoaded', async () => {
+  await loadUserData();
   renderTables();
   recalculateStats();
 });
