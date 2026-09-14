@@ -176,6 +176,15 @@ function renderTables() {
           </svg>
         </div>
       </div>
+      <div class="mobile-scroll-hint">
+        <div style="display:flex; align-items:center; gap:0.4rem;">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+          </svg>
+          <span>Scorri lateralmente per Periodo, CFU, Stato e Note</span>
+        </div>
+        <span>👉</span>
+      </div>
       <div class="table-container">
         <table class="data-table">
           <thead>
