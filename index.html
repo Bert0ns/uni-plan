@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Piano di Studi T2A - Computer Science and Engineering - Politecnico di Milano</title>
+  
+  <!-- External Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <!-- SITE HEADER -->
+  <header class="site-header">
+    <div class="header-left">
+      <div class="polimi-logo-badge">
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222" />
+        </svg>
+      </div>
+      <div class="header-titles">
+        <h1>POLITECNICO DI MILANO — Manifesto degli Studi A.A. 2025/2026</h1>
+        <div class="subtitle">
+          Corso di Laurea Magistrale in <strong>COMPUTER SCIENCE AND ENGINEERING - INGEGNERIA INFORMATICA (542)</strong> &bull; Orientamento <strong>T2A</strong>
+        </div>
+      </div>
+    </div>
+    
+    <div class="header-right">
+      <div class="plan-summary-pill" id="live-plan-pill" onclick="scrollToValidation()" title="Clicca per visualizzare i dettagli dei requisiti di validità del piano T2A">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>CFU: <strong id="stat-total-cfu">0.0</strong> / 120</span>
+        <span style="font-size:0.75rem; opacity:0.85;">(Extra: <span id="stat-sovrannumero-cfu">0.0</span>)</span>
+        <span id="stat-req-pill" class="req-status-pill pill-pending">Vincoli T2A: 0/8</span>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="openExportModal()" title="Esporta le tue note e lo stato del piano in JSON">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          Esporta
+        </button>
+        <button class="btn btn-secondary" onclick="openImportModal()" title="Importa un salvataggio precedente di note e piano">
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          Importa
+        </button>
+        <button class="btn btn-secondary" id="btn-toggle-plan" onclick="toggleOnlyPlanned(document.querySelector('.filter-pill.pill-plan'))" title="Mostra solo gli insegnamenti che hai inserito nel tuo piano">
+          ★ Nel Mio Piano
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="main-container">
+
+    <!-- VALIDATION DASHBOARD -->
+    <div class="validation-card" id="validation-dashboard">
+      <div class="validation-header" onclick="toggleValidationCard()">
+        <div class="validation-title">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          Verifica di Validità del Piano di Studi T2A (D.M. 1648-1649/23 &amp; Regolamento T2A)
+        </div>
+        <div style="font-size:0.8rem; color:var(--slate-500); display:flex; align-items:center; gap:0.4rem;">
+          <span id="validation-toggle-text">Nascondi</span>
+          <svg id="validation-toggle-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </div>
+      </div>
+      <div class="validation-body" id="validation-card-body">
+        
+        <div class="req-grid">
+          <!-- REQ 1: INT1 >= 15 -->
+          <div class="req-box" id="box-req-int1">
+            <div class="req-header-row">
+              <span class="req-name">1. Gruppo INT1</span>
+              <span class="req-badge badge-missing" id="badge-req-int1">Mancano 15.0 CFU</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-int1">0.0</span>
+              <span class="req-cfu-target">/ min. 15 CFU</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-missing" id="bar-req-int1" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span>Interdisciplinari Gruppo INT1</span>
+              <span id="pct-req-int1">0%</span>
+            </div>
+          </div>
+
+          <!-- REQ 2: Tabella A >= 45 -->
+          <div class="req-box" id="box-req-taba">
+            <div class="req-header-row">
+              <span class="req-name">2. Tabella A (TABA)</span>
+              <span class="req-badge badge-missing" id="badge-req-taba">Mancano 45.0 CFU</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-taba">0.0</span>
+              <span class="req-cfu-target">/ min. 45 CFU</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-missing" id="bar-req-taba" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span>Caratterizzanti Informatici</span>
+              <span id="pct-req-taba">0%</span>
+            </div>
+          </div>
+
+          <!-- REQ 3: Tabella A + B >= 55 -->
+          <div class="req-box" id="box-req-tabab">
+            <div class="req-header-row">
+              <span class="req-name">3. Tabella A + Tabella B</span>
+              <span class="req-badge badge-missing" id="badge-req-tabab">Mancano 55.0 CFU</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-tabab">0.0</span>
+              <span class="req-cfu-target">/ min. 55 CFU</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-missing" id="bar-req-tabab" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span id="tabab-detail-text">A: 0.0 + B: 0.0</span>
+              <span id="pct-req-tabab">0%</span>
+            </div>
+          </div>
+
+          <!-- REQ 4: Totale Laurea 120 -->
+          <div class="req-box" id="box-req-total">
+            <div class="req-header-row">
+              <span class="req-name">4. Totale Laurea Magistrale</span>
+              <span class="req-badge badge-missing" id="badge-req-total">Mancano 120.0 CFU</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-total">0.0</span>
+              <span class="req-cfu-target">/ 120 CFU</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-missing" id="bar-req-total" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span id="total-status-sub">0 superati, 0 pianificati</span>
+              <span id="pct-req-total">0%</span>
+            </div>
+          </div>
+
+          <!-- REQ 5: Obbligatori T2A -->
+          <div class="req-box" id="box-req-obbligatori">
+            <div class="req-header-row">
+              <span class="req-name">5. Obbligatori T2A</span>
+              <span class="req-badge badge-missing" id="badge-req-obbligatori">Mancano 8 obbligatori</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-obbligatori">0</span>
+              <span class="req-cfu-target">/ 8 corsi</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-missing" id="bar-req-obbligatori" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span id="obbligatori-detail-text">7 al 1° anno + Tesi (salvo I livello)</span>
+              <span id="pct-req-obbligatori">0%</span>
+            </div>
+          </div>
+
+          <!-- REQ 6: DOT & SOFT SKILLS (Max 1) -->
+          <div class="req-box status-valid" id="box-req-dot-soft">
+            <div class="req-header-row">
+              <span class="req-name">6. DOT &amp; Soft Skills</span>
+              <span class="req-badge badge-valid" id="badge-req-dot-soft">✓ 0/1 corso</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-dot-soft">0</span>
+              <span class="req-cfu-target">/ max 1 corso</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-valid" id="bar-req-dot-soft" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span id="dot-soft-detail-text">Eventuali altri in sovrannumero</span>
+              <span id="pct-req-dot-soft">0/1</span>
+            </div>
+          </div>
+
+          <!-- REQ 7: LIMIT 2 (Etica, Progetto, Diritto, Robotics) (Max 2) -->
+          <div class="req-box status-valid" id="box-req-limit2">
+            <div class="req-header-row">
+              <span class="req-name">7. Etica, Progetto &amp; Diritto</span>
+              <span class="req-badge badge-valid" id="badge-req-limit2">✓ 0/2 corsi</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-limit2">0</span>
+              <span class="req-cfu-target">/ max 2 corsi</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-valid" id="bar-req-limit2" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span id="limit2-detail-text">Ethics, Progetto, Diritto, Robotics</span>
+              <span id="pct-req-limit2">0/2</span>
+            </div>
+          </div>
+
+          <!-- REQ 8: LIMIT 3 AI (Max 3) -->
+          <div class="req-box status-valid" id="box-req-limit3-ai">
+            <div class="req-header-row">
+              <span class="req-name">8. Intelligenza Artificiale</span>
+              <span class="req-badge badge-valid" id="badge-req-limit3-ai">✓ 0/3 corsi</span>
+            </div>
+            <div class="req-cfu-display">
+              <span class="req-cfu-current" id="val-req-limit3-ai">0</span>
+              <span class="req-cfu-target">/ max 3 corsi</span>
+            </div>
+            <div class="req-progress-bar-bg">
+              <div class="req-progress-bar-fill fill-valid" id="bar-req-limit3-ai" style="width: 0%;"></div>
+            </div>
+            <div class="req-info-sub">
+              <span id="limit3-ai-detail-text">ANN, Data Mining, FAI, ML, UAI</span>
+              <span id="pct-req-limit3-ai">0/3</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rules-callout" style="background:#f8fafc; border:1px solid var(--slate-200); border-radius:6px; padding:0.75rem 1rem; font-size:0.775rem; color:var(--slate-600); display:flex; flex-direction:column; gap:0.35rem; margin-top:0.75rem;">
+          <div><strong>📌 Regolamento del Piano di Studi T2A:</strong> I vincoli del piano di studi possono essere verificati solo al momento della presentazione di un piano di studi completo per entrambi gli anni di corso. Dovranno essere selezionati tutti gli insegnamenti obbligatori (salvo che siano già stati sostenuti al I livello).</div>
+          <div><strong>➕ Insegnamenti in Sovrannumero:</strong> Gli insegnamenti eccedenti i limiti di DOT/Soft Skills o del gruppo Etica/Progetto/Diritto possono essere inseriti come corsi in sovrannumero. <em>Nota bene:</em> di norma non è possibile convertire un esame in sovrannumero (supplementare rispetto ai 120 CFU) in esame effettivo senza la presentazione di un nuovo piano degli studi.</div>
+        </div>
+
+        <div class="validation-summary-banner banner-missing" id="validation-summary-banner" style="margin-top:0.75rem;">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <div id="validation-summary-text">
+            Compila il tuo piano selezionando gli insegnamenti per verificare la rispondenza ai requisiti del Regolamento Didattico T2A.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- GENERAL INFO CARD -->
+    <div class="info-card">
+      <div class="info-header" onclick="toggleInfoCard()">
+        <div class="info-title">
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Dettagli Corso di Laurea e Riferimenti Normativi
+        </div>
+        <svg id="info-toggle-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="info-body" id="info-card-body">
+        <div class="info-field">
+          <label>Anno Accademico</label>
+          <div class="value">2025/2026</div>
+        </div>
+        <div class="info-field">
+          <label>Scuola</label>
+          <div class="value">Scuola di Ingegneria Industriale e dell'Informazione (3IN)</div>
+        </div>
+        <div class="info-field">
+          <label>Corso di Studio</label>
+          <div class="value">Computer Science and Engineering - Ingegneria Informatica (542)</div>
+        </div>
+        <div class="info-field">
+          <label>Classe di Laurea</label>
+          <div class="value">LM-32 Ingegneria Informatica</div>
+        </div>
+        <div class="info-field">
+          <label>Orientamento / Pista</label>
+          <div class="value">T2A (Milano Leonardo)</div>
+        </div>
+        <div class="info-field">
+          <label>Sede Didattica</label>
+          <div class="value">Milano Leonardo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTROLS & SEARCH PANEL -->
+    <div class="controls-panel">
+      <div class="search-row">
+        <div class="search-box-wrap">
+          <svg class="search-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+          </svg>
+          <input type="text" id="global-search" class="search-input" placeholder="Cerca per codice (es. 088983), insegnamento, SSD, docente..." oninput="handleSearch()" autocomplete="off">
+          <button class="search-clear-btn" id="search-clear" onclick="clearSearch()" title="Cancella ricerca">✕</button>
+        </div>
+
+        <select id="filter-group" class="filter-select" onchange="handleFilterChange()">
+          <option value="ALL">Tutti i Gruppi / Anni</option>
+          <optgroup label="Requisiti e Vincoli T2A">
+            <option value="REQ_OBBLIGATORI">Insegnamenti Obbligatori T2A (8 insegnamenti)</option>
+            <option value="REQ_INT1">Gruppo INT1 (Requisito ≥ 15 CFU)</option>
+            <option value="REQ_TABA">Tabella A (Requisito ≥ 45 CFU)</option>
+            <option value="REQ_TABB">Tabella B</option>
+            <option value="REQ_TABAB">Tabella A + B (Requisito ≥ 55 CFU)</option>
+            <option value="REQ_DOT_SOFTSKILLS">Tabelle DOT e Soft Skills (Max 1 corso)</option>
+            <option value="REQ_LIMIT2">Etica, Progetto, Diritto, Robotics (Max 2 corsi)</option>
+            <option value="REQ_LIMIT3_AI">Intelligenza Artificiale (Max 3 corsi)</option>
+          </optgroup>
+          <optgroup label="Sezioni del Manifesto">
+            <option value="sec_0">1° Anno (Obbligatori e Scelte)</option>
+            <option value="sec_1">2° Anno (Scelte e Tesi)</option>
+            <option value="sec_2">Gruppo AUT - Automazione</option>
+            <option value="sec_3">Gruppo BIO - Bioingegneria</option>
+            <option value="sec_4">Gruppo DOT - Dottorato</option>
+            <option value="sec_5">Gruppo INT1 - Interdisciplinari 1</option>
+            <option value="sec_6">Gruppo INT2 - Interdisciplinari 2</option>
+            <option value="sec_7">Gruppo MAT - Matematica</option>
+            <option value="sec_8">Gruppo SOFT SKILLS</option>
+            <option value="sec_9">Gruppo TAB ENHANCE</option>
+            <option value="sec_10">Gruppo TABA - Caratterizzanti</option>
+            <option value="sec_11">Gruppo TABB - Approfondimento</option>
+            <option value="sec_12">Gruppo TABELLA SWT - INF</option>
+            <option value="sec_13">Gruppo TABELLA SWT - INTER</option>
+            <option value="sec_14">Gruppo TEL - Telecomunicazioni</option>
+          </optgroup>
+        </select>
+
+        <select id="filter-period" class="filter-select" onchange="handleFilterChange()">
+          <option value="ALL">Tutti i Semestri</option>
+          <option value="1° sem">1° Semestre</option>
+          <option value="2° sem">2° Semestre</option>
+          <option value="annuale">Annuale</option>
+        </select>
+
+        <select id="filter-status" class="filter-select" onchange="handleFilterChange()">
+          <option value="ALL">Tutti gli Stati</option>
+          <option value="plan_active">Tutti nel Mio Piano (Pianificati, Superati, Extra, I Livello)</option>
+          <option value="planned">Solo Pianificati (Nel Piano)</option>
+          <option value="passed">Solo Superati (Verbalizzati)</option>
+          <option value="sovrannumero">Solo in Sovrannumero (Extra)</option>
+          <option value="passed_bachelor">Solo Sostenuti al I Livello</option>
+          <option value="interested">Solo In Valutazione / Preferiti</option>
+          <option value="excluded">Solo Esclusi</option>
+          <option value="with_notes">Solo con Note Personali</option>
+        </select>
+
+        <button class="filter-pill" onclick="resetFilters()" title="Resetta tutti i filtri">Reset Filtri</button>
+        <button class="filter-pill" onclick="expandAllSections()" title="Espandi tutte le tabelle" style="border-color:#cbd5e1;">▼ Espandi Tutte</button>
+        <button class="filter-pill" onclick="collapseAllSections()" title="Comprimi tutte le tabelle" style="border-color:#cbd5e1;">▲ Comprimi Tutte</button>
+
+        <div class="results-count" id="results-count">Mostrati 392 insegnamenti</div>
+      </div>
+
+      <div class="filter-pills">
+        <span style="font-size:0.775rem; font-weight:600; color:var(--slate-500); margin-right:0.25rem;">Filtri rapidi:</span>
+        <button class="filter-pill active" onclick="setQuickGroup('ALL', this)">Tutti</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_OBBLIGATORI', this)" style="border-color:#fca5a5; color:#b91c1c;">Obbligatori T2A</button>
+        <button class="filter-pill" onclick="setQuickGroup('sec_0', this)">1° Anno</button>
+        <button class="filter-pill" onclick="setQuickGroup('sec_1', this)">2° Anno</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_INT1', this)" style="border-color:#bae6fd; color:#0369a1;">INT1 (≥15)</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_TABA', this)" style="border-color:#ddd6fe; color:#6d28d9;">Tabella A (≥45)</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_TABB', this)" style="border-color:#fde68a; color:#b45309;">Tabella B</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_TABAB', this)" style="border-color:#cbd5e1; color:#334155;">Tabella A+B (≥55)</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_LIMIT3_AI', this)" style="border-color:#fde68a; color:#b45309;">AI (Max 3)</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_LIMIT2', this)" style="border-color:#fed7aa; color:#c2410c;">Etica/Proj (Max 2)</button>
+        <button class="filter-pill" onclick="setQuickGroup('REQ_DOT_SOFTSKILLS', this)" style="border-color:#e9d5ff; color:#7e22ce;">DOT/Soft (Max 1)</button>
+        <button class="filter-pill pill-plan" onclick="toggleOnlyPlanned(this)">★ Nel Mio Piano</button>
+      </div>
+    </div>
+
+    <!-- TABLES AREA (Populated dynamically by app.js from manifesto_data.js) -->
+    <div id="tables-wrapper"></div>
+
+  </main>
+
+  <!-- EXPORT / IMPORT MODAL -->
+  <div class="modal-backdrop" id="data-modal" style="display:none;" onclick="if(event.target===this)closeModal()">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modal-title">Esporta / Importa Note</h3>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="modal-desc" style="font-size:0.875rem; color:var(--slate-600); margin-bottom:0.75rem;"></p>
+        <textarea id="modal-text" style="width:100%; height:220px; font-family:monospace; font-size:0.8rem; padding:0.75rem; border:1px solid var(--slate-300); border-radius:6px; resize:vertical;"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Annulla</button>
+        <button class="btn btn-primary" id="modal-action-btn" onclick="executeModalAction()">Azione</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="data/manifesto_data.js"></script>
+  <script src="js/validation.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
