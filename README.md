@@ -24,11 +24,12 @@ Una web application interattiva, moderna e reattiva per pianificare, verificare 
   - Stati selezionabili: `Pianificato (Nel Piano)`, `Superato (Verbalizzato)`, `In Sovrannumero (Extra)`, `Sostenuto al I Livello`, `In Valutazione`, `Escluso`.
   - Salvataggio automatico persistente in `localStorage` e precaricamento del piano di studi predefinito.
   - Campo per annotazioni personali per ogni singolo insegnamento.
-- **Motore di Ricerca e Filtri Avanzati**:
-  - Ricerca istantanea full-text per nome corso, codice o SSD.
-  - Filtri per semestre (1°, 2°, Annuale), per vincolo (INT1, TABA, TABB, Obbligatori, DOT, Limit 2, Limit 3 AI) e per stato.
-  - Filtro rapido per visualizzare esclusivamente i corsi presenti nel proprio piano.
-  - Funzione Comprimi / Espandi per tutte le sezioni o singola tabella.
+- **Motore di Ricerca e Filtri Concorrenti Avanzati**:
+  - **Filtri Concorrenti Simultanei**: combina contemporaneamente ricerca full-text, Anno di corso (1° o 2° anno), vincoli T2A (Obbligatori, Tabella A, Tabella B, INT1, AI, Etica/Proj, DOT/Soft), Semestre (1°, 2°, Annuale), Stato nel Piano (Nel Piano, Non nel Piano, Pianificato, Superato, Sovrannumero, I Livello, Con Note, ecc.), CFU (5.0, 10.0, altri) e Lingua (🇬🇧 EN, 🇮🇹 IT) in un'unica valutazione logica concorrente (AND tra dimensioni, unione multi-selezione tra vincoli).
+  - **Selezione Multipla dei Vincoli**: possibilità di attivare più vincoli curriculari in parallelo (es. Tabella A + INT1) con visualizzazione unificata.
+  - **UI Uniforme & Chip Interattivi**: barra comandi standardizzata con palette semantica elegante, indicatori di stato attivi (✓), chip dismissibili con rimozione selettiva con un clic (✕) e pulsante di ripristino istantaneo (*Reset Filtri* con contatore filtri attivi).
+  - **Stato Vuoto Dedicato & Conteggi in Tempo Reale**: card di feedback amichevole quando nessun corso corrisponde alla combinazione di filtri e badge di corrispondenza per ogni singola tabella (*X / Y visibili*).
+  - **Sincronizzazione Completa**: il pulsante *★ Nel Mio Piano* nella barra di navigazione superiore, la pill rapida e il selettore di stato rimangono perfettamente sincronizzati in tempo reale.
 - **Esportazione & Importazione Dati**:
   - Esporta il piano di studi e le note in formato JSON con un clic negli appunti per creare backup o condividere la configurazione.
   - Importa qualsiasi file o configurazione salvata in precedenza.
