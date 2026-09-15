@@ -1,34 +1,35 @@
-# PoliMi Study Plan Builder — Computer Science & Engineering (T2A)
+# 🎓 PoliMi T2A — Web App Interattiva Manifesto degli Studi & Gestione Piano di Studi
 
-Una web application interattiva, moderna e reattiva per pianificare, verificare e personalizzare il piano di studi della **Laurea Magistrale in Computer Science and Engineering - Ingegneria Informatica (542)** presso il **Politecnico di Milano** (Orientamento **T2A** — Anno Accademico **2026/2027**, 2° Anno).
+[![Politecnico di Milano](https://img.shields.io/badge/PoliMi-Ingegneria%20Informatica%20(T2A)-003366?style=for-the-badge)](https://www.polimi.it/)
+[![A.A. 2026/2027](https://img.shields.io/badge/Anno%20Accademico-2026%2F2027-0284c7?style=for-the-badge)](https://onlineservices.polimi.it/manifesti/manifesti/controller/ManifestoPublic.do?EVN_DETTAGLIO_RIGA_MANIFESTO=evento&k_cf=225&k_corso_la=542&k_indir=T2A&aa=2026)
+[![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=for-the-badge)](LICENSE)
+
+Una web application interattiva, moderna e reattiva per pianificare, verificare e gestire il piano di studi per la **Laurea Magistrale in Computer Science and Engineering (Ingegneria Informatica — Pista T2A)** del **Politecnico di Milano** per l'Anno Accademico **2026/2027**.
 
 ---
 
-## ✨ Caratteristiche Principali
+## ✨ Funzionalità Principali
 
-- **Verifica Vincoli in Tempo Reale**:
-  - Dashboard di convalida automatica per tutte le **8 regole curriculari del piano T2A** (D.M. 1648-1649/23 e Regolamento di Corso):
-    1. **120 CFU Totali**: controllo CFU effettivi tra esami superati e pianificati.
-    2. **8 Insegnamenti Obbligatori T2A**: inclusione dei corsi obbligatori (con supporto per esami già sostenuti al I livello).
-    3. **Gruppo INT1**: almeno 15 CFU.
-    4. **Tabella A (TABA)**: almeno 45 CFU di insegnamenti caratterizzanti.
-    5. **Tabella A + Tabella B (TABA + TABB)**: almeno 55 CFU complessivi.
-    6. **Gruppo DOT & Soft Skills**: al massimo 1 insegnamento effettivo (gli altri gestibili come sovrannumero).
-    7. **Gruppo Etica, Progetto, Diritto & Robotics**: al massimo 2 insegnamenti effettivi.
-    8. **Intelligenza Artificiale**: al massimo 3 insegnamenti effettivi.
-- **Catalogo Completo Insegnamenti Ufficiali**:
-  - Oltre 390 insegnamenti e regole di orientamento estratti direttamente dal Manifesto degli Studi ufficiale per l'A.A. 2026/2027.
-  - Link diretti e funzionanti alla scheda dettagliata del programma sul portale ufficiale del Politecnico di Milano.
-  - Insegnamento opzionale `Theoretical Computer Science` (5 CFU, 1° semestre) incluso nella sezione dedicata.
-- **Gestione Stato Insegnamenti & Note Personali**:
+- **Verifica Automatica di Tutti i Vincoli T2A (Manifesto PoliMi)**:
+  - Totale CFU complessivi (target: 120 CFU).
+  - 8 Insegnamenti Obbligatori (45 CFU) verificati puntualmente.
+  - Tabella A — Insegnamenti Caratterizzanti (almeno 45 CFU).
+  - Tabella A + Tabella B (almeno 55 CFU complessivi).
+  - Gruppo INT1 — Corsi Interdisciplinari (almeno 15 CFU).
+  - Vincolo Intelligenza Artificiale (massimo 3 insegnamenti / 15 CFU).
+  - Vincolo Etica, Progetto, Diritto e Robotics (massimo 2 insegnamenti / 10 CFU).
+  - Vincolo Tabelle DOT e Soft Skills (massimo 1 insegnamento / 2.5-5 CFU).
+- **Gestione Stato Corsi & Note Personali**:
   - Stati selezionabili: `Pianificato (Nel Piano)`, `Superato (Verbalizzato)`, `In Sovrannumero (Extra)`, `Sostenuto al I Livello`, `In Valutazione`, `Escluso`.
   - Salvataggio automatico persistente in `localStorage` e precaricamento del piano di studi predefinito.
   - Campo per annotazioni personali per ogni singolo insegnamento.
-- **Motore di Ricerca e Filtri Avanzati**:
-  - Ricerca istantanea full-text per nome corso, codice o SSD.
-  - Filtri per semestre (1°, 2°, Annuale), per vincolo (INT1, TABA, TABB, Obbligatori, DOT, Limit 2, Limit 3 AI) e per stato.
-  - Filtro rapido per visualizzare esclusivamente i corsi presenti nel proprio piano.
-  - Funzione Comprimi / Espandi per tutte le sezioni o singola tabella.
+- **Motore di Ricerca e Filtri Concorrenti Avanzati**:
+  - **Filtri Concorrenti Simultanei**: combina contemporaneamente ricerca full-text, Anno di corso (1° o 2° anno), vincoli T2A (Obbligatori, Tabella A, Tabella B, INT1, AI, Etica/Proj, DOT/Soft), Semestre (1°, 2°, Annuale), Stato nel Piano (Nel Piano, Non nel Piano, Pianificato, Superato, Sovrannumero, I Livello, Con Note, ecc.), CFU (5.0, 10.0, altri) e Lingua (🇬🇧 EN, 🇮🇹 IT) in un'unica valutazione logica concorrente (AND tra dimensioni, unione multi-selezione tra vincoli).
+  - **Selezione Multipla dei Vincoli**: possibilità di attivare più vincoli curriculari in parallelo (es. Tabella A + INT1) con visualizzazione unificata.
+  - **UI Uniforme & Chip Interattivi**: barra comandi standardizzata con palette semantica elegante, indicatori di stato attivi (✓), chip dismissibili con rimozione selettiva con un clic (✕) e pulsante di ripristino istantaneo (*Reset Filtri* con contatore filtri attivi).
+  - **Stato Vuoto Dedicato & Conteggi in Tempo Reale**: card di feedback amichevole quando nessun corso corrisponde alla combinazione di filtri e badge di corrispondenza per ogni singola tabella (*X / Y visibili*).
+  - **Sincronizzazione Completa**: il pulsante *★ Nel Mio Piano* nella barra di navigazione superiore, la pill rapida e il selettore di stato rimangono perfettamente sincronizzati in tempo reale.
+  - **Funzione Comprimi / Espandi**: espandi o comprimi tutte le sezioni o singola tabella con un clic.
 - **Esportazione & Importazione Dati (File JSON)**:
   - Esporta il piano di studi completo (stati, CFU e note) scaricando un file `.json` pronto per il backup o copiandolo negli appunti.
   - Importa qualsiasi salvataggio precedente tramite Drag & Drop (sull'intera schermata o nell'area dedicata), selettore file o incollando direttamente il codice JSON.
@@ -41,71 +42,37 @@ Una web application interattiva, moderna e reattiva per pianificare, verificare 
 - **Design Ottimizzato per Mobile e Tablet**:
   - Layout responsive fluido con colonna Codice fissa (`sticky`) per scorrere comodamente le tabelle su smartphone senza perdere l'orientamento.
   - Prevenzione dell'auto-zoom su dispositivi iOS e touch targets ampi conformi agli standard di usabilità.
-  - Nessun overflow orizzontale della pagina.
-- **Integrazione PoliNetwork**:
-  - Collegamento diretto a [PoliNetwork](https://beta.polinetwork.org/) per trovare velocemente i gruppi Telegram degli insegnamenti e della community.
+  - Scorrimento orizzontale morbido per i filtri rapidi con indicatori di sfumatura visiva.
 
 ---
 
-## 📁 Struttura del Progetto
+## 🚀 Utilizzo
 
-```
-uni-plan/
-├── index.html                  # Pagina principale dell'applicazione
-├── README.md                   # Documentazione del progetto
-├── css/
-│   └── styles.css              # Stili CSS, tema PoliMi e regole responsive
-├── js/
-│   ├── app.js                  # Logica interfaccia, gestione stato, tabelle e filtri
-│   └── validation.js           # Motore di validazione vincoli e insiemi di codici T2A
-└── data/
-    ├── Manifesti_degli_Studi.html  # Dump HTML ufficiale scaricato dal portale PoliMi
-    ├── manifesto_data.js       # Dati strutturati degli insegnamenti (modulo JS per frontend)
-    ├── manifesto_data.json     # Dati strutturati degli insegnamenti (formato JSON)
-    └── study-plan-state.json   # Stato iniziale / predefinito del piano di studi
-```
+1. Apri `index.html` in qualsiasi browser web moderno (Chrome, Firefox, Safari, Edge) oppure avvia un server locale:
+   ```bash
+   python3 -m http.server 8080
+   # quindi visita http://localhost:8080
+   ```
+2. **Personalizza il tuo piano**:
+   - Cambia lo stato dei corsi tra *Nel Piano*, *Superato*, *Sovrannumero*, *I Livello*, ecc.
+   - Aggiungi note personali su docenti, orari, propedeuticità o scadenze.
+3. **Monitora i vincoli**:
+   - La barra superiore e il riquadro di riepilogo indicano in tempo reale lo stato di soddisfacimento di tutti i requisiti della pista T2A.
+4. **Esporta e sincronizza**:
+   - Salva un backup in locale del tuo piano cliccando su **Esporta** o trascina un backup precedente per ripristinarlo al volo.
 
 ---
 
-## 🚀 Come Utilizzare il Progetto
+## 🛠️ Stack Tecnologico
 
-L'applicazione è puramente client-side (HTML5, CSS3, Vanilla JavaScript), senza dipendenze esterne o build step.
-
-### Apertura Diretta
-Puoi aprire direttamente il file [`index.html`](file:///home/berto/uni-plan/index.html) in qualsiasi browser web moderno (Chrome, Firefox, Safari, Edge).
-
-### Avvio con Server Locale (Consigliato)
-Per testare la persistenza e il caricamento asincrono del piano salvato, puoi avviare un server locale leggero:
-
-```bash
-# Con Python 3
-python3 -m http.server 8080
-
-# Oppure con Node.js (npx)
-npx serve .
-```
-
-Apri quindi [http://localhost:8080](http://localhost:8080) nel tuo browser.
-
----
-
-## ⚙️ Regole di Validazione del Piano T2A
-
-I vincoli implementati in [`js/validation.js`](file:///home/berto/uni-plan/js/validation.js) riflettono accuratamente il regolamento didattico per l'orientamento T2A:
-
-| Vincolo | Requisito | Note |
-|---|---|---|
-| **Totale CFU** | 120 CFU | Somma di insegnamenti pianificati e superati |
-| **Insegnamenti Obbligatori** | 8/8 | 7 esami di base + Prova Finale (20 CFU); se sostenuti in triennale si impostano come *Sostenuto al I Livello* |
-| **Gruppo INT1** | Minimo 15 CFU | Insegnamenti a scelta interdisciplinari |
-| **Tabella A** | Minimo 45 CFU | Insegnamenti caratterizzanti informatici |
-| **Tabella A + B** | Minimo 55 CFU | Con almeno 45 CFU da Tabella A |
-| **Gruppo DOT & Soft Skills** | Massimo 1 corso | Corsi di Dottorato e Soft Skills (eccedenze vanno in sovrannumero) |
-| **Etica, Progetto & Diritto** | Massimo 2 corsi | Include anche Robotica Autonoma (eccedenze in sovrannumero) |
-| **Intelligenza Artificiale** | Massimo 3 corsi | Corsi dell'area Machine Learning / AI (max 3 effettivi) |
+- **HTML5 Semantico** e accessibile.
+- **CSS3 Moderno**: CSS Variables (Design Tokens), Flexbox, CSS Grid, Sticky columns, Media Queries per mobile/tablet/desktop.
+- **Vanilla JavaScript (ES6+)**: Reattivo, leggero, privo di dipendenze esterne pesanti o framework obbligatori.
+- **LocalStorage API**: Persistenza istantanea offline-first senza necessità di database o server remoti.
 
 ---
 
 ## 📄 Licenza
 
-Progetto distribuito per uso personale e accademico. Dati dei corsi estratti dall'offerta didattica ufficiale del Politecnico di Milano.
+Rilasciato sotto licenza [MIT](LICENSE).
+Manifesto degli Studi e dati didattici © [Politecnico di Milano](https://www.polimi.it/).

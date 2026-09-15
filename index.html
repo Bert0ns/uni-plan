@@ -59,7 +59,7 @@
             <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
             Importa
           </button>
-          <button class="btn btn-secondary" id="btn-toggle-plan" onclick="toggleOnlyPlanned(document.querySelector('.filter-pill.pill-plan'))" title="Mostra solo gli insegnamenti che hai inserito nel tuo piano">
+          <button class="btn btn-secondary" id="btn-toggle-plan" onclick="togglePlanFilter()" title="Mostra solo gli insegnamenti che hai inserito nel tuo piano">
             ★ Nel Mio Piano
           </button>
         </div>
@@ -295,29 +295,125 @@
     </div>
 
     <!-- CONTROLS & SEARCH PANEL -->
-    <div class="controls-panel">
-      <div class="search-row">
+    <div class="controls-panel" id="controls-panel">
+      
+      <!-- TOP SEARCH ROW & PRIMARY ACTIONS -->
+      <div class="search-top-bar">
         <div class="search-box-wrap">
           <svg class="search-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
-          <input type="text" id="global-search" class="search-input" placeholder="Cerca per codice (es. 088983), insegnamento, SSD, docente..." oninput="handleSearch()" autocomplete="off">
-          <button class="search-clear-btn" id="search-clear" onclick="clearSearch()" title="Cancella ricerca">✕</button>
+          <input type="text" id="global-search" class="search-input" placeholder="Cerca insegnamento per titolo, codice (es. 088983), SSD, docente, note..." oninput="handleSearchInput()" autocomplete="off">
+          <button class="search-clear-btn" id="search-clear" onclick="clearSearch()" title="Cancella ricerca" aria-label="Cancella ricerca">✕</button>
         </div>
 
-        <select id="filter-group" class="filter-select" onchange="handleFilterChange()">
-          <option value="ALL">Tutti i Gruppi / Anni</option>
-          <optgroup label="Requisiti e Vincoli T2A">
-            <option value="REQ_OBBLIGATORI">Insegnamenti Obbligatori T2A (8 insegnamenti)</option>
-            <option value="REQ_INT1">Gruppo INT1 (Requisito ≥ 15 CFU)</option>
-            <option value="REQ_TABA">Tabella A (Requisito ≥ 45 CFU)</option>
+        <div class="controls-actions">
+          <div class="results-badge" id="results-count" title="Insegnamenti attualmente visibili in base ai filtri">
+            <span class="results-number" id="visible-count">367</span>
+            <span class="results-label">insegnamenti visibili</span>
+          </div>
+
+          <div class="view-buttons-group">
+            <button class="btn-ctrl btn-ctrl-secondary" onclick="expandAllSections()" title="Espandi tutte le tabelle del manifesto">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+              <span>Espandi Tutte</span>
+            </button>
+            <button class="btn-ctrl btn-ctrl-secondary" onclick="collapseAllSections()" title="Comprimi tutte le tabelle del manifesto">
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/></svg>
+              <span>Comprimi Tutte</span>
+            </button>
+          </div>
+
+          <button class="btn-ctrl btn-ctrl-reset" id="btn-reset-filters" onclick="resetFilters()" title="Resetta tutti i filtri attivi" disabled>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            <span>Reset Filtri</span>
+            <span class="filter-count-badge" id="filter-count-badge" style="display:none;">0</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- FILTER DROPDOWNS BAR (CONCURRENT UNIFORM GRID) -->
+      <div class="filter-dropdowns-grid">
+        <!-- Anno -->
+        <div class="filter-field">
+          <label class="filter-label" for="filter-year">Anno</label>
+          <select id="filter-year" class="filter-select" onchange="handleDropdownChange('year', this.value)">
+            <option value="ALL">Tutti gli Anni</option>
+            <option value="1">1° Anno</option>
+            <option value="2">2° Anno</option>
+          </select>
+        </div>
+
+        <!-- Vincolo / Requisito T2A -->
+        <div class="filter-field">
+          <label class="filter-label" for="filter-requirement">Vincolo T2A</label>
+          <select id="filter-requirement" class="filter-select" onchange="handleDropdownChange('requirement', this.value)">
+            <option value="ALL">Tutti i Vincoli</option>
+            <option value="REQ_OBBLIGATORI">Obbligatori T2A (8 corsi)</option>
+            <option value="REQ_TABA">Tabella A (≥45 CFU)</option>
             <option value="REQ_TABB">Tabella B</option>
-            <option value="REQ_TABAB">Tabella A + B (Requisito ≥ 55 CFU)</option>
-            <option value="REQ_DOT_SOFTSKILLS">Tabelle DOT e Soft Skills (Max 1 corso)</option>
-            <option value="REQ_LIMIT2">Etica, Progetto, Diritto, Robotics (Max 2 corsi)</option>
-            <option value="REQ_LIMIT3_AI">Intelligenza Artificiale (Max 3 corsi)</option>
-          </optgroup>
-          <optgroup label="Sezioni del Manifesto">
+            <option value="REQ_TABAB">Tabella A + B (≥55 CFU)</option>
+            <option value="REQ_INT1">Gruppo INT1 (≥15 CFU)</option>
+            <option value="REQ_LIMIT3_AI">Intelligenza Artificiale (Max 3)</option>
+            <option value="REQ_LIMIT2">Etica, Progetto, Diritto (Max 2)</option>
+            <option value="REQ_DOT_SOFTSKILLS">DOT &amp; Soft Skills (Max 1)</option>
+          </select>
+        </div>
+
+        <!-- Semestre -->
+        <div class="filter-field">
+          <label class="filter-label" for="filter-period">Semestre</label>
+          <select id="filter-period" class="filter-select" onchange="handleDropdownChange('period', this.value)">
+            <option value="ALL">Tutti i Semestri</option>
+            <option value="1° sem">1° Semestre</option>
+            <option value="2° sem">2° Semestre</option>
+            <option value="annuale">Annuale</option>
+          </select>
+        </div>
+
+        <!-- Stato nel Piano -->
+        <div class="filter-field">
+          <label class="filter-label" for="filter-status">Stato nel Piano</label>
+          <select id="filter-status" class="filter-select" onchange="handleDropdownChange('status', this.value)">
+            <option value="ALL">Tutti gli Stati</option>
+            <option value="in_plan">★ Nel Mio Piano (Attivi)</option>
+            <option value="not_in_plan">⚪ Non nel Piano (Disponibili)</option>
+            <option value="planned">✅ Solo Pianificati</option>
+            <option value="passed">🎓 Solo Verbalizzati / Superati</option>
+            <option value="sovrannumero">➕ Solo Sovrannumero (Extra)</option>
+            <option value="passed_bachelor">🏛️ Solo Sostenuti al I Livello</option>
+            <option value="interested">⭐ Solo In Valutazione</option>
+            <option value="excluded">❌ Solo Esclusi</option>
+            <option value="with_notes">📝 Solo con Note Personali</option>
+          </select>
+        </div>
+
+        <!-- CFU -->
+        <div class="filter-field">
+          <label class="filter-label" for="filter-cfu">CFU</label>
+          <select id="filter-cfu" class="filter-select" onchange="handleDropdownChange('cfu', this.value)">
+            <option value="ALL">Tutti i CFU</option>
+            <option value="5.0">5.0 CFU</option>
+            <option value="10.0">10.0 CFU</option>
+            <option value="other">Altri CFU (2, 3, 4, 6, 7.5, 8, 9, 15, 20)</option>
+          </select>
+        </div>
+
+        <!-- Lingua -->
+        <div class="filter-field">
+          <label class="filter-label" for="filter-language">Lingua</label>
+          <select id="filter-language" class="filter-select" onchange="handleDropdownChange('language', this.value)">
+            <option value="ALL">Tutte le Lingue</option>
+            <option value="en">🇬🇧 Inglese (EN)</option>
+            <option value="it">🇮🇹 Italiano (IT)</option>
+          </select>
+        </div>
+
+        <!-- Sezione / Tabella Specifica -->
+        <div class="filter-field">
+          <label class="filter-label" for="filter-group">Tabella Manifesto</label>
+          <select id="filter-group" class="filter-select" onchange="handleDropdownChange('group', this.value)">
+            <option value="ALL">Tutte le Tabelle</option>
             <option value="sec_0">1° Anno (Obbligatori e Scelte)</option>
             <option value="sec_1">2° Anno (Scelte e Tesi)</option>
             <option value="sec_2">Gruppo AUT - Automazione</option>
@@ -334,50 +430,107 @@
             <option value="sec_13">Gruppo TABELLA SWT - INTER</option>
             <option value="sec_14">Gruppo TEL - Telecomunicazioni</option>
             <option value="sec_extra">Insegnamenti Aggiuntivi / Opzionali</option>
-          </optgroup>
-        </select>
-
-        <select id="filter-period" class="filter-select" onchange="handleFilterChange()">
-          <option value="ALL">Tutti i Semestri</option>
-          <option value="1° sem">1° Semestre</option>
-          <option value="2° sem">2° Semestre</option>
-          <option value="annuale">Annuale</option>
-        </select>
-
-        <select id="filter-status" class="filter-select" onchange="handleFilterChange()">
-          <option value="ALL">Tutti gli Stati</option>
-          <option value="plan_active">Tutti nel Mio Piano (Pianificati, Superati, Extra, I Livello)</option>
-          <option value="planned">Solo Pianificati (Nel Piano)</option>
-          <option value="passed">Solo Superati (Verbalizzati)</option>
-          <option value="sovrannumero">Solo in Sovrannumero (Extra)</option>
-          <option value="passed_bachelor">Solo Sostenuti al I Livello</option>
-          <option value="interested">Solo In Valutazione / Preferiti</option>
-          <option value="excluded">Solo Esclusi</option>
-          <option value="with_notes">Solo con Note Personali</option>
-        </select>
-
-        <button class="filter-pill" onclick="resetFilters()" title="Resetta tutti i filtri">Reset Filtri</button>
-        <button class="filter-pill" onclick="expandAllSections()" title="Espandi tutte le tabelle" style="border-color:#cbd5e1;">▼ Espandi Tutte</button>
-        <button class="filter-pill" onclick="collapseAllSections()" title="Comprimi tutte le tabelle" style="border-color:#cbd5e1;">▲ Comprimi Tutte</button>
-
-        <div class="results-count" id="results-count">Mostrati 393 insegnamenti</div>
+          </select>
+        </div>
       </div>
 
-      <div class="filter-pills">
-        <span style="font-size:0.775rem; font-weight:600; color:var(--slate-500); margin-right:0.25rem;">Filtri rapidi:</span>
-        <button class="filter-pill active" onclick="setQuickGroup('ALL', this)">Tutti</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_OBBLIGATORI', this)" style="border-color:#fca5a5; color:#b91c1c;">Obbligatori T2A</button>
-        <button class="filter-pill" onclick="setQuickGroup('sec_0', this)">1° Anno</button>
-        <button class="filter-pill" onclick="setQuickGroup('sec_1', this)">2° Anno</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_INT1', this)" style="border-color:#bae6fd; color:#0369a1;">INT1 (≥15)</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_TABA', this)" style="border-color:#ddd6fe; color:#6d28d9;">Tabella A (≥45)</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_TABB', this)" style="border-color:#fde68a; color:#b45309;">Tabella B</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_TABAB', this)" style="border-color:#cbd5e1; color:#334155;">Tabella A+B (≥55)</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_LIMIT3_AI', this)" style="border-color:#fde68a; color:#b45309;">AI (Max 3)</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_LIMIT2', this)" style="border-color:#fed7aa; color:#c2410c;">Etica/Proj (Max 2)</button>
-        <button class="filter-pill" onclick="setQuickGroup('REQ_DOT_SOFTSKILLS', this)" style="border-color:#e9d5ff; color:#7e22ce;">DOT/Soft (Max 1)</button>
-        <button class="filter-pill pill-plan" onclick="toggleOnlyPlanned(this)">★ Nel Mio Piano</button>
+      <!-- INTERACTIVE QUICK FILTER PILLS (UNIFORM CHIPS WITH CONCURRENT TOGGLE) -->
+      <div class="filter-pills-bar">
+        <div class="filter-pills-label">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+          <span>Filtri rapidi:</span>
+        </div>
+
+        <div class="filter-pills-scroll">
+          <button type="button" class="filter-chip chip-all active" id="pill-all" onclick="resetFilters()">
+            <span>Tutti</span>
+          </button>
+
+          <button type="button" class="filter-chip chip-plan" id="pill-plan" onclick="togglePlanFilter()" title="Mostra solo i corsi inseriti nel tuo piano di studi">
+            <span class="chip-icon">★</span>
+            <span>Nel Mio Piano</span>
+            <span class="chip-count" id="pill-plan-count">0</span>
+          </button>
+
+          <span class="pills-separator"></span>
+
+          <button type="button" class="filter-chip chip-req" data-req="REQ_OBBLIGATORI" onclick="toggleRequirementPill('REQ_OBBLIGATORI')" title="Filtra per insegnamenti obbligatori T2A">
+            <span class="chip-dot dot-obbligatorio"></span>
+            <span>Obbligatori T2A</span>
+          </button>
+
+          <button type="button" class="filter-chip chip-req" data-req="REQ_TABA" onclick="toggleRequirementPill('REQ_TABA')" title="Filtra per insegnamenti di Tabella A (Caratterizzanti)">
+            <span class="chip-dot dot-taba"></span>
+            <span>Tabella A (≥45)</span>
+          </button>
+
+          <button type="button" class="filter-chip chip-req" data-req="REQ_TABB" onclick="toggleRequirementPill('REQ_TABB')" title="Filtra per insegnamenti di Tabella B">
+            <span class="chip-dot dot-tabb"></span>
+            <span>Tabella B</span>
+          </button>
+
+          <button type="button" class="filter-chip chip-req" data-req="REQ_INT1" onclick="toggleRequirementPill('REQ_INT1')" title="Filtra per insegnamenti del Gruppo INT1 (Interdisciplinari)">
+            <span class="chip-dot dot-int1"></span>
+            <span>INT1 (≥15)</span>
+          </button>
+
+          <button type="button" class="filter-chip chip-req" data-req="REQ_LIMIT3_AI" onclick="toggleRequirementPill('REQ_LIMIT3_AI')" title="Filtra per insegnamenti di Intelligenza Artificiale (Max 3)">
+            <span class="chip-dot dot-ai"></span>
+            <span>AI (Max 3)</span>
+          </button>
+
+          <button type="button" class="filter-chip chip-req" data-req="REQ_LIMIT2" onclick="toggleRequirementPill('REQ_LIMIT2')" title="Filtra per Etica, Progetto, Diritto, Robotics (Max 2)">
+            <span class="chip-dot dot-limit2"></span>
+            <span>Etica/Proj (Max 2)</span>
+          </button>
+
+          <button type="button" class="filter-chip chip-req" data-req="REQ_DOT_SOFTSKILLS" onclick="toggleRequirementPill('REQ_DOT_SOFTSKILLS')" title="Filtra per Tabelle DOT e Soft Skills (Max 1)">
+            <span class="chip-dot dot-soft"></span>
+            <span>DOT/Soft (Max 1)</span>
+          </button>
+
+          <span class="pills-separator"></span>
+
+          <button type="button" class="filter-chip chip-toggle" id="pill-year-1" onclick="toggleYearPill('1')">
+            <span>1° Anno</span>
+          </button>
+          <button type="button" class="filter-chip chip-toggle" id="pill-year-2" onclick="toggleYearPill('2')">
+            <span>2° Anno</span>
+          </button>
+
+          <span class="pills-separator"></span>
+
+          <button type="button" class="filter-chip chip-toggle" id="pill-sem-1" onclick="togglePeriodPill('1° sem')">
+            <span>1° Semestre</span>
+          </button>
+          <button type="button" class="filter-chip chip-toggle" id="pill-sem-2" onclick="togglePeriodPill('2° sem')">
+            <span>2° Semestre</span>
+          </button>
+        </div>
       </div>
+
+      <!-- ACTIVE FILTERS TRAY (1-CLICK REMOVAL) -->
+      <div class="active-filters-bar" id="active-filters-bar" style="display:none;">
+        <span class="active-filters-title">Filtri attivi:</span>
+        <div class="active-tags-list" id="active-tags-list"></div>
+        <button type="button" class="clear-all-tags-btn" onclick="resetFilters()">Rimuovi tutti</button>
+      </div>
+
+    </div>
+
+    <!-- NO RESULTS EMPTY STATE -->
+    <div id="no-results-card" class="no-results-card" style="display:none;">
+      <div class="no-results-icon">
+        <svg width="48" height="48" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+        </svg>
+      </div>
+      <h3 class="no-results-title">Nessun insegnamento trovato</h3>
+      <p class="no-results-desc">Nessun insegnamento corrisponde alla combinazione di filtri attualmente attiva.</p>
+      <button class="btn btn-primary" onclick="resetFilters()">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Resetta tutti i filtri
+      </button>
     </div>
 
     <!-- TABLES AREA (Populated dynamically by app.js from manifesto_data.js) -->

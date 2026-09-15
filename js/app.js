@@ -2,7 +2,6 @@
 
 let userNotesData = {};
 let saveTimeout = null;
-let showOnlyPlanned = false;
 let modalMode = 'export';
 
 const GROUP_TO_SECTION_MAP = {
@@ -20,6 +19,61 @@ const GROUP_TO_SECTION_MAP = {
   '#idGruppo5758': 'sec_12',
   '#idGruppo5759': 'sec_13',
 };
+
+// --- CONCURRENT FILTER STATE ---
+const filterState = {
+  search: '',
+  year: 'ALL',             // 'ALL' | '1' | '2'
+  requirements: new Set(), // Set of strings: 'REQ_OBBLIGATORI', 'REQ_TABA', 'REQ_TABB', 'REQ_TABAB', 'REQ_INT1', 'REQ_LIMIT3_AI', 'REQ_LIMIT2', 'REQ_DOT_SOFTSKILLS'
+  group: 'ALL',            // 'ALL' | specific section ID e.g. 'sec_0', 'sec_2'
+  period: 'ALL',           // 'ALL' | '1° sem' | '2° sem' | 'annuale'
+  status: 'ALL',           // 'ALL' | 'in_plan' | 'not_in_plan' | 'planned' | 'passed' | 'sovrannumero' | 'passed_bachelor' | 'interested' | 'excluded' | 'with_notes'
+  cfu: 'ALL',              // 'ALL' | '5.0' | '10.0' | 'other'
+  language: 'ALL'          // 'ALL' | 'en' | 'it'
+};
+
+const REQUIREMENT_LABELS = {
+  'REQ_OBBLIGATORI': 'Obbligatori T2A',
+  'REQ_TABA': 'Tabella A (≥45)',
+  'REQ_TABB': 'Tabella B',
+  'REQ_TABAB': 'Tabella A + B (≥55)',
+  'REQ_INT1': 'INT1 (≥15)',
+  'REQ_LIMIT3_AI': 'AI (Max 3)',
+  'REQ_LIMIT2': 'Etica/Proj (Max 2)',
+  'REQ_DOT_SOFTSKILLS': 'DOT/Soft (Max 1)'
+};
+
+const STATUS_LABELS = {
+  'in_plan': 'Nel Mio Piano',
+  'not_in_plan': 'Non nel Piano',
+  'planned': 'Pianificati',
+  'passed': 'Superati',
+  'sovrannumero': 'In Sovrannumero',
+  'passed_bachelor': 'Sostenuto al I Livello',
+  'interested': 'In Valutazione',
+  'excluded': 'Esclusi',
+  'with_notes': 'Con Note'
+};
+
+const SECTION_NAMES_MAP = {
+  'sec_0': '1° Anno',
+  'sec_1': '2° Anno',
+  'sec_2': 'Gruppo AUT',
+  'sec_3': 'Gruppo BIO',
+  'sec_4': 'Gruppo DOT',
+  'sec_5': 'Gruppo INT1',
+  'sec_6': 'Gruppo INT2',
+  'sec_7': 'Gruppo MAT',
+  'sec_8': 'Gruppo SOFT SKILLS',
+  'sec_9': 'Gruppo TAB ENHANCE',
+  'sec_10': 'Gruppo TABA',
+  'sec_11': 'Gruppo TABB',
+  'sec_12': 'Gruppo SWT - INF',
+  'sec_13': 'Gruppo SWT - INTER',
+  'sec_14': 'Gruppo TEL',
+  'sec_extra': 'Insegnamenti Aggiuntivi'
+};
+
 
 // --- DATA PERSISTENCE & LOCAL CACHING ---
 async function loadUserData() {
@@ -141,7 +195,6 @@ document.addEventListener('visibilitychange', () => {
 
 function sanitizeUrl(url) {
   if (!url) return '#';
-  // Ensure unescaping any entity before passing to escapeHtml to prevent double-escaping
   const clean = url.replace(/&amp;/g, '&');
   return escapeHtml(clean);
 }
@@ -179,7 +232,7 @@ function renderTables() {
     const rowsHtml = sec.rows.map(row => {
       if (row.is_choice) {
         return `
-        <tr id="${row.row_id}" class="choice-rule-row" data-code="--" data-sec="${sec.id}" data-name="${escapeHtml(row.name.toLowerCase())}" data-ssd="--" data-ssdsm="--" data-period="--" data-cfu="---" data-is-int1="false" data-is-taba="false" data-is-tabb="false">
+        <tr id="${row.row_id}" class="choice-rule-row" data-code="--" data-sec="${sec.id}" data-name="${escapeHtml(row.name.toLowerCase())}" data-ssd="--" data-ssdsm="--" data-period="--" data-cfu="---" data-lang="other" data-is-int1="false" data-is-taba="false" data-is-tabb="false">
           <td class="center"><span style="color:var(--slate-400);">--</span></td>
           <td style="font-size:0.75rem; color:var(--slate-600);">--</td>
           <td style="font-size:0.75rem; color:var(--slate-600); font-weight:500;">--</td>
@@ -209,9 +262,10 @@ function renderTables() {
       if (row.is_tabb) tags.push('<span class="tag-badge tag-tabb" title="Insegnamento valido per Tabella B">Tabella B</span>');
 
       const periodClass = row.period.includes('1') ? 'period-1' : (row.period.includes('2') ? 'period-2' : 'period-annuale');
+      const langAttr = row.lang.toLowerCase().includes('en') ? 'en' : (row.lang.toLowerCase().includes('it') ? 'it' : 'other');
 
       return `
-      <tr id="${row.row_id}" class="row-${status}" data-code="${row.code}" data-sec="${sec.id}" data-name="${escapeHtml(row.name.toLowerCase())}" data-ssd="${escapeHtml(row.ssd.toLowerCase())}" data-ssdsm="${escapeHtml(row.ssdsm.toLowerCase())}" data-period="${escapeHtml(row.period)}" data-cfu="${row.cfu}" data-is-int1="${row.is_int1}" data-is-taba="${row.is_taba}" data-is-tabb="${row.is_tabb}" data-is-obbligatorio="${row.is_obbligatorio}" data-is-ai="${row.is_ai}" data-is-limit2="${row.is_limit2}" data-is-dot-soft="${row.is_dot || row.is_soft}">
+      <tr id="${row.row_id}" class="row-${status}" data-code="${row.code}" data-sec="${sec.id}" data-name="${escapeHtml(row.name.toLowerCase())}" data-ssd="${escapeHtml(row.ssd.toLowerCase())}" data-ssdsm="${escapeHtml(row.ssdsm.toLowerCase())}" data-period="${escapeHtml(row.period)}" data-cfu="${row.cfu}" data-lang="${langAttr}" data-is-int1="${row.is_int1}" data-is-taba="${row.is_taba}" data-is-tabb="${row.is_tabb}" data-is-obbligatorio="${row.is_obbligatorio}" data-is-ai="${row.is_ai}" data-is-limit2="${row.is_limit2}" data-is-dot-soft="${row.is_dot || row.is_soft}">
         <td class="center"><span class="course-code" title="Clicca per copiare" onclick="copyText('${row.code}')">${row.code}</span></td>
         <td style="font-size:0.75rem; color:var(--slate-600);">${escapeHtml(row.ssdsm)}</td>
         <td style="font-size:0.75rem; color:var(--slate-600); font-weight:500;">${escapeHtml(row.ssd)}</td>
@@ -251,6 +305,7 @@ function renderTables() {
         <div class="section-title">
           <span>${escapeHtml(sec.title)}</span>
           <span class="section-badge">${escapeHtml(sec.badge)}</span>
+          <span class="section-match-badge" id="match-badge-${sec.id}" style="display:none;"></span>
           <span class="section-plan-badge" id="plan-badge-${sec.id}" style="display:none;"></span>
         </div>
         <div class="section-toggle-btn">
@@ -386,8 +441,11 @@ function updateCourseStatus(code, status, cfu) {
     }
   });
 
-  if (showOnlyPlanned) {
-    handleSearch();
+  // Re-apply filters if status filter is active
+  if (filterState.status !== 'ALL') {
+    applyFilters();
+  } else {
+    updatePlanCountPill();
   }
 }
 
@@ -413,6 +471,10 @@ function handleNoteInput(code, text) {
       t.style.display = 'block';
       setTimeout(() => { t.style.display = 'none'; }, 1500);
     });
+    // If filtering by notes or active search query, refresh filters
+    if (filterState.status === 'with_notes' || filterState.search.length > 0) {
+      applyFilters();
+    }
   }, 600);
 }
 
@@ -491,6 +553,7 @@ function recalculateStats() {
 
   // Update Section Badges
   updateSectionPlanBadges();
+  updatePlanCountPill();
 
   // Summary Banner
   updateSummaryBanner(state);
@@ -626,30 +689,178 @@ function updateSummaryBanner(state) {
   }
 }
 
-// --- SEARCH & FILTER ENGINE ---
-function handleSearch() {
+// --- CONCURRENT FILTER ENGINE ---
+
+function handleSearchInput() {
   const searchInput = document.getElementById('global-search');
-  const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+  filterState.search = (searchInput ? searchInput.value : '').trim();
   const clearBtn = document.getElementById('search-clear');
-  if (clearBtn) clearBtn.style.display = query.length > 0 ? 'block' : 'none';
+  if (clearBtn) clearBtn.style.display = filterState.search.length > 0 ? 'block' : 'none';
+  applyFilters();
+}
 
-  const groupFilter = document.getElementById('filter-group').value;
-  const periodFilter = document.getElementById('filter-period').value;
-  const statusFilter = document.getElementById('filter-status').value;
+function clearSearch() {
+  const searchInput = document.getElementById('global-search');
+  if (searchInput) searchInput.value = '';
+  filterState.search = '';
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+  applyFilters();
+}
 
-  let visibleCount = 0;
+function handleDropdownChange(type, value) {
+  if (type === 'year') {
+    filterState.year = value;
+  } else if (type === 'requirement') {
+    filterState.requirements.clear();
+    if (value !== 'ALL' && value !== '_MULTI_') {
+      filterState.requirements.add(value);
+    }
+  } else if (type === 'period') {
+    filterState.period = value;
+  } else if (type === 'status') {
+    filterState.status = value;
+  } else if (type === 'cfu') {
+    filterState.cfu = value;
+  } else if (type === 'language') {
+    filterState.language = value;
+  } else if (type === 'group') {
+    filterState.group = value;
+  }
+  applyFilters();
+}
+
+function toggleRequirementPill(reqKey) {
+  if (filterState.requirements.has(reqKey)) {
+    filterState.requirements.delete(reqKey);
+  } else {
+    filterState.requirements.add(reqKey);
+  }
+  applyFilters();
+}
+
+function toggleYearPill(yearVal) {
+  if (filterState.year === yearVal) {
+    filterState.year = 'ALL';
+  } else {
+    filterState.year = yearVal;
+  }
+  applyFilters();
+}
+
+function togglePeriodPill(periodVal) {
+  if (filterState.period === periodVal) {
+    filterState.period = 'ALL';
+  } else {
+    filterState.period = periodVal;
+  }
+  applyFilters();
+}
+
+function togglePlanFilter() {
+  if (filterState.status === 'in_plan') {
+    filterState.status = 'ALL';
+  } else {
+    filterState.status = 'in_plan';
+  }
+  applyFilters();
+}
+
+function removeFilter(type, value) {
+  if (type === 'search') {
+    clearSearch();
+    return;
+  } else if (type === 'year') {
+    filterState.year = 'ALL';
+  } else if (type === 'requirement') {
+    filterState.requirements.delete(value);
+  } else if (type === 'period') {
+    filterState.period = 'ALL';
+  } else if (type === 'status') {
+    filterState.status = 'ALL';
+  } else if (type === 'cfu') {
+    filterState.cfu = 'ALL';
+  } else if (type === 'language') {
+    filterState.language = 'ALL';
+  } else if (type === 'group') {
+    filterState.group = 'ALL';
+  }
+  applyFilters();
+}
+
+function resetFilters() {
+  const searchInput = document.getElementById('global-search');
+  if (searchInput) searchInput.value = '';
+  filterState.search = '';
+  filterState.year = 'ALL';
+  filterState.requirements.clear();
+  filterState.period = 'ALL';
+  filterState.status = 'ALL';
+  filterState.cfu = 'ALL';
+  filterState.language = 'ALL';
+  filterState.group = 'ALL';
+
+  const clearBtn = document.getElementById('search-clear');
+  if (clearBtn) clearBtn.style.display = 'none';
+
+  applyFilters();
+}
+
+// Main Filtering Function: Evaluates all sections and rows against filterState concurrently
+function applyFilters() {
+  const query = filterState.search.toLowerCase().trim();
+  const year = filterState.year;
+  const reqs = filterState.requirements;
+  const group = filterState.group;
+  const period = filterState.period;
+  const status = filterState.status;
+  const cfu = filterState.cfu;
+  const lang = filterState.language;
+
+  // Determine if specific course-level filters are active (if so, choice rules rows -- are hidden)
+  const hasSpecificFilters = Boolean(
+    query.length > 0 ||
+    reqs.size > 0 ||
+    period !== 'ALL' ||
+    status !== 'ALL' ||
+    cfu !== 'ALL' ||
+    lang !== 'ALL'
+  );
+
+  let totalVisibleCourses = 0;
+  let totalVisibleSections = 0;
 
   document.querySelectorAll('.section-card').forEach(secCard => {
     const secId = secCard.id;
-    const matchesGroup = (groupFilter === 'ALL' || groupFilter.startsWith('REQ_') || groupFilter === secId);
+    let secCourseCount = 0;
+    let secVisibleCount = 0;
 
-    let secVisibleRows = 0;
+    // Year matching: sec_0 is 1st year; all other sections are 2nd year
+    const isYear1Sec = (secId === 'sec_0');
+    const sectionMatchesYear = (year === 'ALL') || (year === '1' && isYear1Sec) || (year === '2' && !isYear1Sec);
+    const sectionMatchesGroup = (group === 'ALL') || (group === secId);
 
     secCard.querySelectorAll('tbody tr').forEach(row => {
       const code = row.getAttribute('data-code');
       const isChoice = (code === '--');
+      if (!isChoice) secCourseCount++;
+
+      // If the section doesn't match year or specific group filter, hide row immediately
+      if (!sectionMatchesYear || !sectionMatchesGroup) {
+        row.style.display = 'none';
+        return;
+      }
+
+      // Hide orientation choice placeholder rows when specific course filters are active
+      if (isChoice && hasSpecificFilters) {
+        row.style.display = 'none';
+        return;
+      }
+
       const rowText = row.textContent.toLowerCase();
-      const period = row.getAttribute('data-period') || '';
+      const rowPeriod = (row.getAttribute('data-period') || '').toLowerCase();
+      const rowCfu = parseFloat(row.getAttribute('data-cfu')) || 0;
+      const rowLang = (row.getAttribute('data-lang') || 'other');
       const isInt1 = row.getAttribute('data-is-int1') === 'true';
       const isTaba = row.getAttribute('data-is-taba') === 'true';
       const isTabb = row.getAttribute('data-is-tabb') === 'true';
@@ -660,150 +871,402 @@ function handleSearch() {
 
       const userState = userNotesData[code] || {};
       const courseStatus = userState.status || 'none';
-      const hasNote = userState.note && userState.note.trim().length > 0;
+      const hasNote = Boolean(userState.note && userState.note.trim().length > 0);
       const isMyPlan = ['planned', 'passed', 'sovrannumero', 'passed_bachelor'].includes(courseStatus);
 
-      if (!matchesGroup) {
-        row.style.display = 'none';
-        return;
+      // 1. Text Search Filter
+      let matchesSearch = true;
+      if (query.length > 0) {
+        const noteText = (userState.note || '').toLowerCase();
+        matchesSearch = rowText.includes(query) || noteText.includes(query);
       }
 
-      if (groupFilter === 'REQ_INT1' && (!isInt1 || isChoice)) {
-        row.style.display = 'none';
-        return;
-      }
-      if (groupFilter === 'REQ_TABA' && (!isTaba || isChoice)) {
-        row.style.display = 'none';
-        return;
-      }
-      if (groupFilter === 'REQ_TABB' && (!isTabb || isChoice)) {
-        row.style.display = 'none';
-        return;
-      }
-      if (groupFilter === 'REQ_TABAB' && ((!isTaba && !isTabb) || isChoice)) {
-        row.style.display = 'none';
-        return;
-      }
-      if (groupFilter === 'REQ_OBBLIGATORI' && (!isObb || isChoice)) {
-        row.style.display = 'none';
-        return;
-      }
-      if (groupFilter === 'REQ_DOT_SOFTSKILLS' && (!isDotSoft || isChoice)) {
-        row.style.display = 'none';
-        return;
-      }
-      if (groupFilter === 'REQ_LIMIT2' && (!isLimit2 || isChoice)) {
-        row.style.display = 'none';
-        return;
-      }
-      if (groupFilter === 'REQ_LIMIT3_AI' && (!isAi || isChoice)) {
-        row.style.display = 'none';
-        return;
+      // 2. Requirements Filter (Union: matches ANY of the selected requirements)
+      let matchesReq = true;
+      if (reqs.size > 0) {
+        if (isChoice) {
+          matchesReq = false;
+        } else {
+          matchesReq = false;
+          for (const req of reqs) {
+            if (req === 'REQ_OBBLIGATORI' && isObb) { matchesReq = true; break; }
+            if (req === 'REQ_TABA' && isTaba) { matchesReq = true; break; }
+            if (req === 'REQ_TABB' && isTabb) { matchesReq = true; break; }
+            if (req === 'REQ_TABAB' && (isTaba || isTabb)) { matchesReq = true; break; }
+            if (req === 'REQ_INT1' && isInt1) { matchesReq = true; break; }
+            if (req === 'REQ_LIMIT3_AI' && isAi) { matchesReq = true; break; }
+            if (req === 'REQ_LIMIT2' && isLimit2) { matchesReq = true; break; }
+            if (req === 'REQ_DOT_SOFTSKILLS' && isDotSoft) { matchesReq = true; break; }
+          }
+        }
       }
 
-      if (showOnlyPlanned && !isMyPlan) {
-        row.style.display = 'none';
-        return;
+      // 3. Period / Semester Filter
+      let matchesPeriod = true;
+      if (period !== 'ALL') {
+        if (isChoice) {
+          matchesPeriod = false;
+        } else if (period === '1° sem') {
+          matchesPeriod = rowPeriod.includes('1');
+        } else if (period === '2° sem') {
+          matchesPeriod = rowPeriod.includes('2');
+        } else if (period === 'annuale') {
+          matchesPeriod = rowPeriod.includes('annuale');
+        }
       }
 
-      if (statusFilter === 'plan_active' && !isMyPlan) {
-        row.style.display = 'none';
-        return;
-      } else if (statusFilter === 'planned' && courseStatus !== 'planned') {
-        row.style.display = 'none';
-        return;
-      } else if (statusFilter === 'passed' && courseStatus !== 'passed') {
-        row.style.display = 'none';
-        return;
-      } else if (statusFilter === 'sovrannumero' && courseStatus !== 'sovrannumero') {
-        row.style.display = 'none';
-        return;
-      } else if (statusFilter === 'passed_bachelor' && courseStatus !== 'passed_bachelor') {
-        row.style.display = 'none';
-        return;
-      } else if (statusFilter === 'interested' && courseStatus !== 'interested') {
-        row.style.display = 'none';
-        return;
-      } else if (statusFilter === 'excluded' && courseStatus !== 'excluded') {
-        row.style.display = 'none';
-        return;
-      } else if (statusFilter === 'with_notes' && !hasNote) {
-        row.style.display = 'none';
-        return;
+      // 4. Status in Plan Filter
+      let matchesStatus = true;
+      if (status !== 'ALL') {
+        if (isChoice) {
+          matchesStatus = false;
+        } else if (status === 'in_plan') {
+          matchesStatus = isMyPlan;
+        } else if (status === 'not_in_plan') {
+          matchesStatus = !isMyPlan;
+        } else if (status === 'planned') {
+          matchesStatus = (courseStatus === 'planned');
+        } else if (status === 'passed') {
+          matchesStatus = (courseStatus === 'passed');
+        } else if (status === 'sovrannumero') {
+          matchesStatus = (courseStatus === 'sovrannumero');
+        } else if (status === 'passed_bachelor') {
+          matchesStatus = (courseStatus === 'passed_bachelor');
+        } else if (status === 'interested') {
+          matchesStatus = (courseStatus === 'interested');
+        } else if (status === 'excluded') {
+          matchesStatus = (courseStatus === 'excluded');
+        } else if (status === 'with_notes') {
+          matchesStatus = hasNote;
+        }
       }
 
-      if (periodFilter !== 'ALL' && period !== periodFilter && !isChoice) {
-        row.style.display = 'none';
-        return;
+      // 5. CFU Filter
+      let matchesCfu = true;
+      if (cfu !== 'ALL') {
+        if (isChoice) {
+          matchesCfu = false;
+        } else if (cfu === '5.0') {
+          matchesCfu = (rowCfu === 5);
+        } else if (cfu === '10.0') {
+          matchesCfu = (rowCfu === 10);
+        } else if (cfu === 'other') {
+          matchesCfu = (rowCfu !== 5 && rowCfu !== 10);
+        }
       }
 
-      if (query.length > 0 && !rowText.includes(query)) {
-        row.style.display = 'none';
-        return;
+      // 6. Language Filter
+      let matchesLang = true;
+      if (lang !== 'ALL') {
+        if (isChoice) {
+          matchesLang = false;
+        } else if (lang === 'en') {
+          matchesLang = (rowLang === 'en');
+        } else if (lang === 'it') {
+          matchesLang = (rowLang === 'it');
+        }
       }
 
-      row.style.display = '';
-      secVisibleRows++;
-      if (!isChoice) visibleCount++;
+      const isVisible = matchesSearch && matchesReq && matchesPeriod && matchesStatus && matchesCfu && matchesLang;
+
+      if (isVisible) {
+        row.style.display = '';
+        if (!isChoice) {
+          secVisibleCount++;
+          totalVisibleCourses++;
+        }
+      } else {
+        row.style.display = 'none';
+      }
     });
 
-    secCard.style.display = (secVisibleRows > 0) ? '' : 'none';
-    if (query.length > 0 && secVisibleRows > 0 && secCard.classList.contains('is-collapsed')) {
-      toggleSection(secId);
+    // Update section card visibility and badge
+    const matchBadge = document.getElementById(`match-badge-${secId}`);
+    const shouldShowSection = (secVisibleCount > 0) || (!hasSpecificFilters && sectionMatchesYear && sectionMatchesGroup);
+
+    if (shouldShowSection) {
+      secCard.style.display = '';
+      totalVisibleSections++;
+
+      if (matchBadge) {
+        if (secVisibleCount < secCourseCount) {
+          matchBadge.textContent = `${secVisibleCount} / ${secCourseCount} visibili`;
+          matchBadge.className = 'section-match-badge badge-filtered';
+          matchBadge.style.display = 'inline-block';
+        } else {
+          matchBadge.textContent = `${secCourseCount} corsi`;
+          matchBadge.className = 'section-match-badge';
+          matchBadge.style.display = 'inline-block';
+        }
+      }
+
+      // Auto-expand section if query has matches and section was collapsed
+      if (query.length > 0 && secVisibleCount > 0 && secCard.classList.contains('is-collapsed')) {
+        toggleSection(secId);
+      }
+    } else {
+      secCard.style.display = 'none';
+      if (matchBadge) matchBadge.style.display = 'none';
     }
   });
 
-  const countEl = document.getElementById('results-count');
-  if (countEl) {
-    countEl.textContent = `Mostrati ${visibleCount} insegnamenti`;
+  // Update empty state
+  const noResultsCard = document.getElementById('no-results-card');
+  if (noResultsCard) {
+    noResultsCard.style.display = (totalVisibleCourses === 0) ? 'flex' : 'none';
+  }
+
+  // Update results count and UI states
+  updateResultsCount(totalVisibleCourses, totalVisibleSections);
+  updateFilterUIElements();
+}
+
+// Synchronize all dropdowns, pills, active filter tags, and reset button
+function updateFilterUIElements() {
+  // Sync dropdowns
+  const yearSelect = document.getElementById('filter-year');
+  if (yearSelect && yearSelect.value !== filterState.year) yearSelect.value = filterState.year;
+
+  const periodSelect = document.getElementById('filter-period');
+  if (periodSelect && periodSelect.value !== filterState.period) periodSelect.value = filterState.period;
+
+  const statusSelect = document.getElementById('filter-status');
+  if (statusSelect && statusSelect.value !== filterState.status) statusSelect.value = filterState.status;
+
+  const cfuSelect = document.getElementById('filter-cfu');
+  if (cfuSelect && cfuSelect.value !== filterState.cfu) cfuSelect.value = filterState.cfu;
+
+  const langSelect = document.getElementById('filter-language');
+  if (langSelect && langSelect.value !== filterState.language) langSelect.value = filterState.language;
+
+  const groupSelect = document.getElementById('filter-group');
+  if (groupSelect && groupSelect.value !== filterState.group) groupSelect.value = filterState.group;
+
+  // Sync requirement dropdown
+  const reqSelect = document.getElementById('filter-requirement');
+  if (reqSelect) {
+    let multiOption = reqSelect.querySelector('option[value="_MULTI_"]');
+    if (filterState.requirements.size === 0) {
+      if (multiOption) multiOption.remove();
+      reqSelect.value = 'ALL';
+    } else if (filterState.requirements.size === 1) {
+      if (multiOption) multiOption.remove();
+      reqSelect.value = Array.from(filterState.requirements)[0];
+    } else {
+      if (!multiOption) {
+        multiOption = document.createElement('option');
+        multiOption.value = '_MULTI_';
+        reqSelect.appendChild(multiOption);
+      }
+      multiOption.textContent = `⚡ Multipli Selezionati (${filterState.requirements.size})`;
+      reqSelect.value = '_MULTI_';
+    }
+  }
+
+  // Count active filters
+  let activeCount = 0;
+  if (filterState.search.length > 0) activeCount++;
+  if (filterState.year !== 'ALL') activeCount++;
+  activeCount += filterState.requirements.size;
+  if (filterState.period !== 'ALL') activeCount++;
+  if (filterState.status !== 'ALL') activeCount++;
+  if (filterState.cfu !== 'ALL') activeCount++;
+  if (filterState.language !== 'ALL') activeCount++;
+  if (filterState.group !== 'ALL') activeCount++;
+
+  // Sync Reset Button
+  const resetBtn = document.getElementById('btn-reset-filters');
+  const countBadge = document.getElementById('filter-count-badge');
+  if (resetBtn) {
+    resetBtn.disabled = (activeCount === 0);
+  }
+  if (countBadge) {
+    if (activeCount > 0) {
+      countBadge.textContent = activeCount;
+      countBadge.style.display = 'inline-flex';
+    } else {
+      countBadge.style.display = 'none';
+    }
+  }
+
+  // Sync Quick Pills
+  const pillAll = document.getElementById('pill-all');
+  if (pillAll) {
+    pillAll.classList.toggle('active', activeCount === 0);
+  }
+
+  const pillPlan = document.getElementById('pill-plan');
+  const isPlanActive = (filterState.status === 'in_plan');
+  if (pillPlan) {
+    pillPlan.classList.toggle('active', isPlanActive);
+  }
+
+  const headerPlanBtn = document.getElementById('btn-toggle-plan');
+  if (headerPlanBtn) {
+    headerPlanBtn.classList.toggle('btn-accent', isPlanActive);
+  }
+
+  // Requirement chips
+  document.querySelectorAll('.filter-chip.chip-req').forEach(chip => {
+    const req = chip.getAttribute('data-req');
+    chip.classList.toggle('active', filterState.requirements.has(req));
+  });
+
+  // Year chips
+  const pillYear1 = document.getElementById('pill-year-1');
+  if (pillYear1) pillYear1.classList.toggle('active', filterState.year === '1');
+  const pillYear2 = document.getElementById('pill-year-2');
+  if (pillYear2) pillYear2.classList.toggle('active', filterState.year === '2');
+
+  // Semester chips
+  const pillSem1 = document.getElementById('pill-sem-1');
+  if (pillSem1) pillSem1.classList.toggle('active', filterState.period === '1° sem');
+  const pillSem2 = document.getElementById('pill-sem-2');
+  if (pillSem2) pillSem2.classList.toggle('active', filterState.period === '2° sem');
+
+  // Render Active Filter Tags Tray
+  renderActiveFilterTags(activeCount);
+}
+
+function renderActiveFilterTags(activeCount) {
+  const bar = document.getElementById('active-filters-bar');
+  const list = document.getElementById('active-tags-list');
+  if (!bar || !list) return;
+
+  if (activeCount === 0) {
+    bar.style.display = 'none';
+    list.innerHTML = '';
+    return;
+  }
+
+  bar.style.display = 'flex';
+  const tagsHtml = [];
+
+  if (filterState.search.length > 0) {
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>Testo: "<strong>${escapeHtml(filterState.search)}</strong>"</span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('search')" title="Rimuovi filtro ricerca">✕</button>
+      </span>
+    `);
+  }
+
+  if (filterState.year !== 'ALL') {
+    const yrLabel = filterState.year === '1' ? '1° Anno' : '2° Anno';
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>Anno: <strong>${yrLabel}</strong></span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('year')" title="Rimuovi filtro anno">✕</button>
+      </span>
+    `);
+  }
+
+  filterState.requirements.forEach(req => {
+    const reqLabel = REQUIREMENT_LABELS[req] || req;
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>Vincolo: <strong>${escapeHtml(reqLabel)}</strong></span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('requirement', '${req}')" title="Rimuovi vincolo">✕</button>
+      </span>
+    `);
+  });
+
+  if (filterState.period !== 'ALL') {
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>Semestre: <strong>${escapeHtml(filterState.period)}</strong></span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('period')" title="Rimuovi filtro semestre">✕</button>
+      </span>
+    `);
+  }
+
+  if (filterState.status !== 'ALL') {
+    const stLabel = STATUS_LABELS[filterState.status] || filterState.status;
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>Stato: <strong>${escapeHtml(stLabel)}</strong></span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('status')" title="Rimuovi filtro stato">✕</button>
+      </span>
+    `);
+  }
+
+  if (filterState.cfu !== 'ALL') {
+    const cfuLabel = (filterState.cfu === 'other') ? 'Altri CFU' : `${filterState.cfu} CFU`;
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>CFU: <strong>${cfuLabel}</strong></span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('cfu')" title="Rimuovi filtro CFU">✕</button>
+      </span>
+    `);
+  }
+
+  if (filterState.language !== 'ALL') {
+    const langLabel = (filterState.language === 'en') ? 'Inglese' : 'Italiano';
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>Lingua: <strong>${langLabel}</strong></span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('language')" title="Rimuovi filtro lingua">✕</button>
+      </span>
+    `);
+  }
+
+  if (filterState.group !== 'ALL') {
+    const grpLabel = SECTION_NAMES_MAP[filterState.group] || filterState.group;
+    tagsHtml.push(`
+      <span class="active-tag">
+        <span>Tabella: <strong>${escapeHtml(grpLabel)}</strong></span>
+        <button type="button" class="active-tag-remove" onclick="removeFilter('group')" title="Rimuovi filtro sezione">✕</button>
+      </span>
+    `);
+  }
+
+  list.innerHTML = tagsHtml.join('');
+}
+
+function updateResultsCount(visibleCourses, visibleSections) {
+  const visibleNumEl = document.getElementById('visible-count');
+  if (visibleNumEl) visibleNumEl.textContent = visibleCourses;
+
+  const countBadge = document.getElementById('results-count');
+  if (countBadge) {
+    countBadge.title = `${visibleCourses} insegnamenti visibili in ${visibleSections} tabelle`;
   }
 }
 
-function clearSearch() {
-  const searchInput = document.getElementById('global-search');
-  if (searchInput) searchInput.value = '';
-  handleSearch();
+function updatePlanCountPill() {
+  const countEl = document.getElementById('pill-plan-count');
+  if (!countEl) return;
+
+  const planCodes = new Set();
+  Object.entries(userNotesData).forEach(([code, data]) => {
+    if (['planned', 'passed', 'sovrannumero', 'passed_bachelor'].includes(data.status)) {
+      planCodes.add(code);
+    }
+  });
+
+  countEl.textContent = planCodes.size;
 }
 
-function handleFilterChange() {
-  handleSearch();
-}
-
+// Backward Compatibility Wrappers
+function handleSearch() { applyFilters(); }
+function handleFilterChange() { applyFilters(); }
+function toggleOnlyPlanned(btn) { togglePlanFilter(); }
 function setQuickGroup(grpVal, pillBtn) {
-  document.querySelectorAll('.filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
-  if (pillBtn) pillBtn.classList.add('active');
-  document.getElementById('filter-group').value = grpVal;
-  handleSearch();
-}
-
-function toggleOnlyPlanned(btn) {
-  showOnlyPlanned = !showOnlyPlanned;
-  const navBtn = document.getElementById('btn-toggle-plan');
-  if (showOnlyPlanned) {
-    if (navBtn) navBtn.classList.add('btn-accent');
-    if (btn) btn.classList.add('active');
+  if (grpVal === 'ALL') {
+    resetFilters();
+  } else if (grpVal.startsWith('REQ_')) {
+    toggleRequirementPill(grpVal);
+  } else if (grpVal === 'sec_0') {
+    toggleYearPill('1');
+  } else if (grpVal === 'sec_1') {
+    toggleYearPill('2');
   } else {
-    if (navBtn) navBtn.classList.remove('btn-accent');
-    if (btn) btn.classList.remove('active');
+    filterState.group = grpVal;
+    applyFilters();
   }
-  handleSearch();
 }
 
-function resetFilters() {
-  const searchInput = document.getElementById('global-search');
-  if (searchInput) searchInput.value = '';
-  document.getElementById('filter-group').value = 'ALL';
-  document.getElementById('filter-period').value = 'ALL';
-  document.getElementById('filter-status').value = 'ALL';
-  showOnlyPlanned = false;
-  const navBtn = document.getElementById('btn-toggle-plan');
-  if (navBtn) navBtn.classList.remove('btn-accent');
-  document.querySelectorAll('.filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
-  const firstPill = document.querySelector('.filter-pills .filter-pill');
-  if (firstPill) firstPill.classList.add('active');
-  handleSearch();
-}
-
+// --- INFO & VALIDATION CARD COLLAPSE ---
 function toggleInfoCard() {
   const body = document.getElementById('info-card-body');
   const icon = document.getElementById('info-toggle-icon');
@@ -1321,15 +1784,15 @@ window.addEventListener('storage', (e) => {
   if (e.key === STORAGE_KEY && e.newValue) {
     try {
       const parsed = JSON.parse(e.newValue);
-      if (parsed && typeof parsed === 'object') {
+      if (parsed && typeof parsed === "object") {
         userNotesData = parsed;
         renderTables();
         recalculateStats();
-        handleSearch();
-        updateCacheStatusUI('Sincronizzato da altra scheda');
+        applyFilters();
+        updateCacheStatusUI("Sincronizzato da altra scheda");
       }
     } catch (err) {
-      console.warn('Storage sync error:', err);
+      console.warn("Storage sync error:", err);
     }
   }
 });
@@ -1339,6 +1802,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   await loadUserData();
   renderTables();
   recalculateStats();
+  applyFilters();
   setupDragAndDrop();
   setupGlobalDragAndDrop();
 });
