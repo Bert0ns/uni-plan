@@ -29,9 +29,15 @@ Una web application interattiva, moderna e reattiva per pianificare, verificare 
   - Filtri per semestre (1°, 2°, Annuale), per vincolo (INT1, TABA, TABB, Obbligatori, DOT, Limit 2, Limit 3 AI) e per stato.
   - Filtro rapido per visualizzare esclusivamente i corsi presenti nel proprio piano.
   - Funzione Comprimi / Espandi per tutte le sezioni o singola tabella.
-- **Esportazione & Importazione Dati**:
-  - Esporta il piano di studi e le note in formato JSON con un clic negli appunti per creare backup o condividere la configurazione.
-  - Importa qualsiasi file o configurazione salvata in precedenza.
+- **Esportazione & Importazione Dati (File JSON)**:
+  - Esporta il piano di studi completo (stati, CFU e note) scaricando un file `.json` pronto per il backup o copiandolo negli appunti.
+  - Importa qualsiasi salvataggio precedente tramite Drag & Drop (sull'intera schermata o nell'area dedicata), selettore file o incollando direttamente il codice JSON.
+  - Normalizzazione e validazione intelligente: supporta dizionari, liste di corsi, oggetti nidificati e sinonimi di stato.
+- **Persistenza & Caching Locale nel Browser**:
+  - Salvataggio automatico persistente in `localStorage` ad ogni modifica di stato o inserimento di note personali (con salvataggio automatico preventivo alla chiusura della scheda).
+  - Indicatore visivo dello stato di salvataggio in tempo reale nella barra superiore.
+  - Sincronizzazione automatica tra più schede del browser aperte in contemporanea.
+  - Opzioni per il ripristino del piano predefinito o l'azzeramento completo.
 - **Design Ottimizzato per Mobile e Tablet**:
   - Layout responsive fluido con colonna Codice fissa (`sticky`) per scorrere comodamente le tabelle su smartphone senza perdere l'orientamento.
   - Prevenzione dell'auto-zoom su dispositivi iOS e touch targets ampi conformi agli standard di usabilità.
