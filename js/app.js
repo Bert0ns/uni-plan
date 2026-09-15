@@ -74,39 +74,124 @@ const SECTION_NAMES_MAP = {
   'sec_extra': 'Insegnamenti Aggiuntivi'
 };
 
-// --- DATA PERSISTENCE ---
+
+// --- DATA PERSISTENCE & LOCAL CACHING ---
 async function loadUserData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
-      userNotesData = JSON.parse(saved);
-      return;
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        userNotesData = parsed;
+        updateCacheStatusUI('Salvato in locale');
+        return;
+      }
     }
   } catch (e) {
     console.error('Failed to load user notes from localStorage:', e);
   }
 
-  // Fallback to pre-saved study plan if available
+  // Fallback to pre-saved study plan file if available
   try {
     const resp = await fetch('data/study-plan-state.json');
     if (resp.ok) {
       userNotesData = await resp.json();
-      saveUserData();
+      saveUserData({ silent: true });
+      updateCacheStatusUI('Salvato in locale');
+      return;
     }
   } catch (e) {
     console.warn('Could not load data/study-plan-state.json default:', e);
+  }
+
+  // Fallback to embedded default state
+  if (typeof DEFAULT_STUDY_PLAN_STATE !== 'undefined') {
+    userNotesData = JSON.parse(JSON.stringify(DEFAULT_STUDY_PLAN_STATE));
+    saveUserData({ silent: true });
+    updateCacheStatusUI('Salvato in locale');
+  } else {
     userNotesData = {};
   }
 }
 
-function saveUserData() {
+let flashStatusTimer = null;
+function flashCacheStatus() {
+  const dotEl = document.getElementById('cache-dot');
+  const textEl = document.getElementById('cache-status-text');
+  if (!dotEl || !textEl) return;
+
+  dotEl.classList.add('saving');
+  textEl.textContent = 'Salvataggio...';
+
+  clearTimeout(flashStatusTimer);
+  flashStatusTimer = setTimeout(() => {
+    dotEl.classList.remove('saving');
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    textEl.textContent = `Salvato (${timeStr})`;
+  }, 400);
+}
+
+function updateCacheStatusUI(text, isError = false) {
+  const textEl = document.getElementById('cache-status-text');
+  const dotEl = document.getElementById('cache-dot');
+  if (textEl) textEl.textContent = text;
+  if (dotEl) {
+    dotEl.className = 'cache-dot';
+    dotEl.style.background = isError ? '#ef4444' : '#10b981';
+    dotEl.style.boxShadow = isError ? '0 0 6px #ef4444' : '0 0 6px rgba(16, 185, 129, 0.7)';
+  }
+}
+
+function cleanUserPlanData() {
+  if (!userNotesData || typeof userNotesData !== 'object') {
+    userNotesData = {};
+    return;
+  }
+  for (const [code, val] of Object.entries(userNotesData)) {
+    if (!val || typeof val !== 'object') {
+      delete userNotesData[code];
+      continue;
+    }
+    if (val.note !== undefined && (!val.note || !String(val.note).trim())) {
+      delete val.note;
+    }
+    if ((!val.status || val.status === 'none') && !val.note) {
+      delete userNotesData[code];
+    }
+  }
+}
+
+function saveUserData(options = {}) {
+  cleanUserPlanData();
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(userNotesData));
+    if (!options.silent) {
+      flashCacheStatus();
+    }
   } catch (e) {
     console.error('Failed to save to localStorage:', e);
+    updateCacheStatusUI('Errore salvataggio', true);
   }
   recalculateStats();
 }
+
+function flushPendingNotes() {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+    saveUserData();
+  }
+}
+
+// Global hooks ensuring browser cache is never lost on navigation/tab close
+window.addEventListener('beforeunload', flushPendingNotes);
+window.addEventListener('pagehide', flushPendingNotes);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    flushPendingNotes();
+  }
+});
 
 function sanitizeUrl(url) {
   if (!url) return '#';
@@ -207,7 +292,7 @@ function renderTables() {
         </td>
         <td>
           <div style="display:flex; align-items:center; gap:0.4rem;">
-            <textarea class="user-note-input" data-code="${row.code}" placeholder="Aggiungi nota personale..." oninput="handleNoteInput('${row.code}', this.value)">${escapeHtml(note)}</textarea>
+            <textarea class="user-note-input" data-code="${row.code}" placeholder="Aggiungi nota personale..." oninput="handleNoteInput('${row.code}', this.value)" onblur="flushPendingNotes()" onchange="flushPendingNotes()">${escapeHtml(note)}</textarea>
             <span class="note-saved-tick" id="tick-${row.code}">✓</span>
           </div>
         </td>
@@ -341,6 +426,9 @@ function updateCourseStatus(code, status, cfu) {
   if (!isNaN(parsedCfu) && parsedCfu > 0) {
     userNotesData[code].cfu = parsedCfu;
   }
+  if (status === 'none' && (!userNotesData[code].note || !userNotesData[code].note.trim())) {
+    delete userNotesData[code];
+  }
   saveUserData();
 
   // Sync across all rows sharing this course code
@@ -363,7 +451,14 @@ function updateCourseStatus(code, status, cfu) {
 
 function handleNoteInput(code, text) {
   if (!userNotesData[code]) userNotesData[code] = {};
-  userNotesData[code].note = text;
+  if (text && text.trim().length > 0) {
+    userNotesData[code].note = text;
+  } else {
+    delete userNotesData[code].note;
+  }
+  if ((!userNotesData[code].status || userNotesData[code].status === 'none') && !userNotesData[code].note) {
+    delete userNotesData[code];
+  }
 
   document.querySelectorAll(`.user-note-input[data-code="${code}"]`).forEach(txt => {
     if (txt.value !== text) txt.value = text;
@@ -1214,53 +1309,493 @@ function copyText(txt) {
   }).catch(() => {});
 }
 
-// --- EXPORT & IMPORT MODALS ---
+// --- TOAST NOTIFICATIONS ---
+function showToast(message, type = 'success', duration = 3500) {
+  const container = document.getElementById('toast-container');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  
+  let iconSvg = '';
+  if (type === 'success') {
+    iconSvg = '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>';
+  } else if (type === 'error') {
+    iconSvg = '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>';
+  } else {
+    iconSvg = '<svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
+  }
+
+  toast.innerHTML = `<span style="display:inline-flex; align-items:center;">${iconSvg}</span><span>${escapeHtml(message)}</span>`;
+  container.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add('toast-show');
+  });
+
+  setTimeout(() => {
+    toast.classList.remove('toast-show');
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 300);
+  }, duration);
+}
+
+// --- EXPORT & IMPORT MODALS & FILE HANDLING ---
 function openExportModal() {
+  flushPendingNotes();
+  cleanUserPlanData();
   modalMode = 'export';
-  document.getElementById('modal-title').textContent = 'Esporta Note e Piano di Studi';
-  document.getElementById('modal-desc').textContent = 'Copia questo testo JSON per conservare un backup delle tue note e scelte di piano:';
-  document.getElementById('modal-text').value = JSON.stringify(userNotesData, null, 2);
-  document.getElementById('modal-text').readOnly = true;
-  document.getElementById('modal-action-btn').textContent = 'Copia negli Appunti';
-  document.getElementById('data-modal').style.display = 'flex';
+
+  const modalTitle = document.getElementById('modal-title');
+  const modalDesc = document.getElementById('modal-desc');
+  const exportPanel = document.getElementById('modal-export-panel');
+  const importPanel = document.getElementById('modal-import-panel');
+  const resetDefaultBtn = document.getElementById('modal-reset-default-btn');
+  const clearPlanBtn = document.getElementById('modal-clear-plan-btn');
+  const actionBtn = document.getElementById('modal-action-btn');
+  const modalText = document.getElementById('modal-text');
+
+  if (modalTitle) modalTitle.textContent = 'Esporta Piano di Studi (JSON)';
+  if (modalDesc) modalDesc.textContent = 'Scarica lo stato attuale del tuo piano di studi (inclusi CFU, stati e note) come file JSON, oppure copialo negli appunti.';
+
+  if (exportPanel) exportPanel.style.display = 'block';
+  if (importPanel) importPanel.style.display = 'none';
+  if (resetDefaultBtn) resetDefaultBtn.style.display = 'none';
+  if (clearPlanBtn) clearPlanBtn.style.display = 'none';
+
+  // Populate mini-dashboard
+  const state = evaluatePlanState(userNotesData);
+  const plannedCount = Object.values(userNotesData).filter(v => ['planned', 'passed', 'sovrannumero', 'passed_bachelor'].includes(v.status)).length;
+  const notesCount = Object.values(userNotesData).filter(v => v.note && v.note.trim().length > 0).length;
+
+  const statsContainer = document.getElementById('modal-export-stats');
+  if (statsContainer) {
+    statsContainer.innerHTML = `
+      <div class="modal-stat-item">
+        <span class="modal-stat-val">${state.totalCombined.toFixed(1)}</span>
+        <span class="modal-stat-lbl">CFU Effettivi</span>
+      </div>
+      <div class="modal-stat-item">
+        <span class="modal-stat-val">${plannedCount}</span>
+        <span class="modal-stat-lbl">Insegnamenti</span>
+      </div>
+      <div class="modal-stat-item">
+        <span class="modal-stat-val">${state.validRulesCount}/8</span>
+        <span class="modal-stat-lbl">Vincoli T2A</span>
+      </div>
+      <div class="modal-stat-item">
+        <span class="modal-stat-val">${notesCount}</span>
+        <span class="modal-stat-lbl">Note Personali</span>
+      </div>
+    `;
+  }
+
+  if (modalText) {
+    modalText.value = JSON.stringify(userNotesData, null, 2);
+    modalText.readOnly = true;
+  }
+
+  if (actionBtn) {
+    actionBtn.textContent = 'Scarica File .json';
+    actionBtn.onclick = downloadPlanJsonFile;
+  }
+
+  const modal = document.getElementById('data-modal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function downloadPlanJsonFile() {
+  flushPendingNotes();
+  cleanUserPlanData();
+  const dateStr = new Date().toISOString().split('T')[0];
+  const filename = `piano-studi-t2a_${dateStr}.json`;
+  const jsonStr = JSON.stringify(userNotesData, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  showToast(`File "${filename}" scaricato con successo!`, 'success');
+}
+
+function copyPlanJsonToClipboard() {
+  flushPendingNotes();
+  cleanUserPlanData();
+  const jsonStr = JSON.stringify(userNotesData, null, 2);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(jsonStr).then(() => {
+      showToast('JSON copiato negli appunti!', 'success');
+    }).catch(() => {
+      copyFallback(jsonStr);
+    });
+  } else {
+    copyFallback(jsonStr);
+  }
+}
+
+function copyFallback(text) {
+  const modalText = document.getElementById('modal-text');
+  if (modalText) {
+    modalText.select();
+    document.execCommand('copy');
+    showToast('JSON copiato negli appunti!', 'success');
+  } else {
+    showToast('Impossibile copiare negli appunti.', 'error');
+  }
 }
 
 function openImportModal() {
+  flushPendingNotes();
   modalMode = 'import';
-  document.getElementById('modal-title').textContent = 'Importa Note e Piano di Studi';
-  document.getElementById('modal-desc').textContent = 'Incolla qui sotto il testo JSON esportato in precedenza:';
-  document.getElementById('modal-text').value = '';
-  document.getElementById('modal-text').readOnly = false;
-  document.getElementById('modal-action-btn').textContent = 'Ripristina Note';
-  document.getElementById('data-modal').style.display = 'flex';
+
+  const modalTitle = document.getElementById('modal-title');
+  const modalDesc = document.getElementById('modal-desc');
+  const exportPanel = document.getElementById('modal-export-panel');
+  const importPanel = document.getElementById('modal-import-panel');
+  const resetDefaultBtn = document.getElementById('modal-reset-default-btn');
+  const clearPlanBtn = document.getElementById('modal-clear-plan-btn');
+  const actionBtn = document.getElementById('modal-action-btn');
+  const modalText = document.getElementById('modal-text');
+  const fileInput = document.getElementById('import-file-input');
+  const statusEl = document.getElementById('file-import-status');
+
+  if (modalTitle) modalTitle.textContent = 'Importa Piano di Studi (File JSON)';
+  if (modalDesc) modalDesc.textContent = 'Carica un file .json salvato in precedenza oppure incolla direttamente il JSON per ripristinare il piano:';
+
+  if (exportPanel) exportPanel.style.display = 'none';
+  if (importPanel) importPanel.style.display = 'block';
+  if (resetDefaultBtn) resetDefaultBtn.style.display = 'inline-block';
+  if (clearPlanBtn) clearPlanBtn.style.display = 'inline-block';
+
+  if (fileInput) fileInput.value = '';
+  if (statusEl) {
+    statusEl.style.display = 'none';
+    statusEl.textContent = '';
+  }
+
+  if (modalText) {
+    modalText.value = '';
+    modalText.readOnly = false;
+    modalText.placeholder = '{\n  "088983": { "status": "passed", "cfu": 5 },\n  "089182": { "status": "planned", "cfu": 5 }\n}';
+  }
+
+  if (actionBtn) {
+    actionBtn.textContent = 'Importa Piano';
+    actionBtn.onclick = executeModalAction;
+  }
+
+  const modal = document.getElementById('data-modal');
+  if (modal) modal.style.display = 'flex';
 }
 
 function closeModal() {
-  document.getElementById('data-modal').style.display = 'none';
+  const modal = document.getElementById('data-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+function validateAndNormalizePlanData(input) {
+  let parsed;
+  if (typeof input === 'string') {
+    try {
+      const clean = input.trim().replace(/^\uFEFF/, '');
+      parsed = JSON.parse(clean);
+    } catch (e) {
+      return { valid: false, error: 'Sintassi JSON non valida: ' + e.message };
+    }
+  } else if (input && typeof input === 'object') {
+    parsed = input;
+  } else {
+    return { valid: false, error: 'Il file o testo non contiene un oggetto JSON valido.' };
+  }
+
+  // Handle common wrapper keys (e.g. { "plan": { ... } }, { "studyPlan": { ... } }, etc.)
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    for (const wrapperKey of ['plan', 'userNotesData', 'studyPlan', 'courses', 'data', 'piano']) {
+      if (parsed[wrapperKey] && typeof parsed[wrapperKey] === 'object' && !Array.isArray(parsed[wrapperKey])) {
+        parsed = parsed[wrapperKey];
+        break;
+      }
+    }
+  }
+
+  // Handle array of course objects: [ { code: "088983", status: "passed", cfu: 5 }, ... ]
+  if (Array.isArray(parsed)) {
+    const obj = {};
+    for (const item of parsed) {
+      if (item && typeof item === 'object') {
+        const code = item.code || item.codice || item.courseCode || item.id;
+        if (code) {
+          obj[code] = item;
+        }
+      }
+    }
+    parsed = obj;
+  }
+
+  if (typeof parsed !== 'object' || parsed === null) {
+    return { valid: false, error: 'Il JSON deve essere un oggetto contenente i codici degli insegnamenti o una lista di corsi.' };
+  }
+
+  const validData = {};
+  let count = 0;
+
+  const statusAliases = {
+    'pianificato': 'planned',
+    'nel piano': 'planned',
+    'nel_piano': 'planned',
+    'superato': 'passed',
+    'verbalizzato': 'passed',
+    'sovrannumero': 'sovrannumero',
+    'extra': 'sovrannumero',
+    'in sovrannumero': 'sovrannumero',
+    'in_sovrannumero': 'sovrannumero',
+    'triennale': 'passed_bachelor',
+    'i livello': 'passed_bachelor',
+    'primo livello': 'passed_bachelor',
+    'primo_livello': 'passed_bachelor',
+    'bachelor': 'passed_bachelor',
+    'sostenuto al i livello': 'passed_bachelor',
+    'sostenuto_primo_livello': 'passed_bachelor',
+    'in valutazione': 'interested',
+    'in_valutazione': 'interested',
+    'valutazione': 'interested',
+    'interessato': 'interested',
+    'preferito': 'interested',
+    'escluso': 'excluded',
+    'none': 'none'
+  };
+  const allowedStatuses = new Set(['planned', 'passed', 'sovrannumero', 'passed_bachelor', 'interested', 'excluded', 'none']);
+
+  for (const [code, val] of Object.entries(parsed)) {
+    if (!val || typeof val !== 'object') continue;
+    const entry = {};
+
+    if (val.status !== undefined && val.status !== null) {
+      let st = String(val.status).trim().toLowerCase();
+      if (statusAliases[st]) st = statusAliases[st];
+      if (allowedStatuses.has(st)) {
+        entry.status = st;
+      }
+    }
+
+    if (val.cfu !== undefined && val.cfu !== null) {
+      const parsedCfu = parseFloat(String(val.cfu).replace(',', '.'));
+      if (!isNaN(parsedCfu) && parsedCfu > 0) {
+        entry.cfu = parsedCfu;
+      }
+    }
+
+    if (val.note !== undefined && val.note !== null) {
+      const noteStr = String(val.note).trim();
+      if (noteStr.length > 0) {
+        entry.note = String(val.note);
+      }
+    }
+
+    // Keep entry if it has an active status or a note
+    if ((entry.status && entry.status !== 'none') || entry.note) {
+      validData[code] = entry;
+      count++;
+    }
+  }
+
+  if (count === 0 && Object.keys(parsed).length > 0) {
+    return { valid: true, data: {}, courseCount: 0 };
+  } else if (count === 0) {
+    return { valid: false, error: 'Nessun insegnamento valido trovato nel file JSON fornito.' };
+  }
+
+  return { valid: true, data: validData, courseCount: count };
+}
+
+function handleFileSelected(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  processJsonFile(file);
+  event.target.value = '';
+}
+
+function processJsonFile(file) {
+  const statusEl = document.getElementById('file-import-status');
+  if (!file.name.toLowerCase().endsWith('.json') && file.type && !file.type.includes('json')) {
+    if (statusEl) {
+      statusEl.style.display = 'flex';
+      statusEl.className = 'file-status-badge status-err';
+      statusEl.textContent = 'Attenzione: seleziona un file con estensione .json';
+    }
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const content = e.target.result;
+    const res = validateAndNormalizePlanData(content);
+    if (!res.valid) {
+      if (statusEl) {
+        statusEl.style.display = 'flex';
+        statusEl.className = 'file-status-badge status-err';
+        statusEl.textContent = res.error || 'Errore durante la lettura del file JSON.';
+      }
+      return;
+    }
+
+    if (statusEl) {
+      statusEl.style.display = 'flex';
+      statusEl.className = 'file-status-badge status-ok';
+      statusEl.innerHTML = `<span>✓ File <strong>${escapeHtml(file.name)}</strong> (${(file.size / 1024).toFixed(1)} KB) — <strong>${res.courseCount}</strong> insegnamenti rilevati.</span> <button class="btn btn-sm btn-primary" onclick="executeModalAction()" style="margin-left:auto; padding:0.25rem 0.65rem; font-size:0.75rem;">Importa Subito</button>`;
+    }
+
+    const textEl = document.getElementById('modal-text');
+    if (textEl) {
+      textEl.value = JSON.stringify(res.data, null, 2);
+    }
+  };
+  reader.onerror = () => {
+    if (statusEl) {
+      statusEl.style.display = 'flex';
+      statusEl.className = 'file-status-badge status-err';
+      statusEl.textContent = 'Errore durante la lettura del file.';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function setupDragAndDrop() {
+  const dropZone = document.getElementById('file-drop-zone');
+  if (!dropZone) return;
+
+  ['dragenter', 'dragover'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.add('drag-over');
+    }, false);
+  });
+
+  ['dragleave', 'dragend'].forEach(eventName => {
+    dropZone.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropZone.classList.remove('drag-over');
+    }, false);
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dropZone.classList.remove('drag-over');
+    const dt = e.dataTransfer;
+    const files = dt && dt.files;
+    if (files && files.length > 0) {
+      processJsonFile(files[0]);
+    }
+  }, false);
+}
+
+function setupGlobalDragAndDrop() {
+  window.addEventListener('dragover', (e) => {
+    e.preventDefault();
+  }, false);
+
+  window.addEventListener('drop', (e) => {
+    const dt = e.dataTransfer;
+    const files = dt && dt.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.name.toLowerCase().endsWith('.json') || (file.type && file.type.includes('json'))) {
+        e.preventDefault();
+        openImportModal();
+        processJsonFile(file);
+      }
+    }
+  }, false);
 }
 
 function executeModalAction() {
   if (modalMode === 'export') {
-    const txt = document.getElementById('modal-text').value;
-    navigator.clipboard.writeText(txt).then(() => {
-      alert('Note copiate negli appunti con successo!');
-      closeModal();
-    });
+    downloadPlanJsonFile();
+    return;
+  }
+
+  const rawText = document.getElementById('modal-text').value.trim();
+  if (!rawText) {
+    showToast('Inserisci del testo JSON o seleziona un file JSON da caricare.', 'error');
+    return;
+  }
+
+  const res = validateAndNormalizePlanData(rawText);
+  if (!res.valid) {
+    showToast(res.error || 'JSON non valido.', 'error');
+    return;
+  }
+
+  userNotesData = res.data;
+  saveUserData();
+  renderTables();
+  recalculateStats();
+  handleSearch();
+
+  closeModal();
+  showToast(`Piano di studi importato con successo (${res.courseCount} corsi) e salvato nel browser!`, 'success', 4000);
+}
+
+function clearPlan() {
+  if (!confirm('Sei sicuro di voler azzerare il piano di studi? Tutti gli stati e le note degli insegnamenti verranno rimossi.')) {
+    return;
+  }
+  userNotesData = {};
+  saveUserData();
+  renderTables();
+  recalculateStats();
+  handleSearch();
+  closeModal();
+  showToast('Piano di studi azzerato e aggiornato nella memoria locale!', 'info', 3500);
+}
+
+function resetToDefaultPlan() {
+  if (!confirm('Sei sicuro di voler ripristinare il piano di studi predefinito? Tutte le modifiche attuali verranno sovrascritte.')) {
+    return;
+  }
+
+  if (typeof DEFAULT_STUDY_PLAN_STATE !== 'undefined') {
+    userNotesData = JSON.parse(JSON.stringify(DEFAULT_STUDY_PLAN_STATE));
   } else {
+    userNotesData = {};
+  }
+
+  saveUserData();
+  renderTables();
+  recalculateStats();
+  handleSearch();
+
+  closeModal();
+  showToast('Piano di studi predefinito ripristinato e memorizzato nella cache locale!', 'info', 4000);
+}
+
+// Cross-tab synchronization via storage event
+window.addEventListener('storage', (e) => {
+  if (e.key === STORAGE_KEY && e.newValue) {
     try {
-      const parsed = JSON.parse(document.getElementById('modal-text').value);
-      userNotesData = parsed;
-      saveUserData();
-      renderTables();
-      recalculateStats();
-      applyFilters();
-      alert('Note importate con successo!');
-      closeModal();
-    } catch (e) {
-      alert('Errore nel formato JSON. Assicurati di aver incollato un JSON valido.');
+      const parsed = JSON.parse(e.newValue);
+      if (parsed && typeof parsed === "object") {
+        userNotesData = parsed;
+        renderTables();
+        recalculateStats();
+        applyFilters();
+        updateCacheStatusUI("Sincronizzato da altra scheda");
+      }
+    } catch (err) {
+      console.warn("Storage sync error:", err);
     }
   }
-}
+});
 
 // --- APPLICATION INITIALIZATION ---
 window.addEventListener('DOMContentLoaded', async () => {
@@ -1268,4 +1803,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   renderTables();
   recalculateStats();
   applyFilters();
+  setupDragAndDrop();
+  setupGlobalDragAndDrop();
 });

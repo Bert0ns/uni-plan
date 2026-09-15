@@ -2,6 +2,38 @@
 
 const STORAGE_KEY = 'polimi_manifesto_notes_542_2026';
 
+// Default pre-saved study plan state
+const DEFAULT_STUDY_PLAN_STATE = {
+  "054443": { "status": "passed_bachelor", "cfu": 5 },
+  "088983": { "status": "passed", "cfu": 5 },
+  "089182": { "status": "planned", "cfu": 5 },
+  "089183": { "status": "passed", "cfu": 5 },
+  "088949": { "status": "passed", "cfu": 5 },
+  "095898": { "status": "passed", "cfu": 5 },
+  "055633": { "status": "passed", "cfu": 5 },
+  "089254": { "status": "planned", "cfu": 20 },
+  "054445": { "status": "passed", "cfu": 5 },
+  "085900": { "status": "planned", "cfu": 5 },
+  "054092": { "status": "planned", "cfu": 5 },
+  "097677": { "status": "planned", "cfu": 5 },
+  "088805": { "status": "planned", "cfu": 5 },
+  "088804": { "status": "planned", "cfu": 5 },
+  "056899": { "status": "planned", "cfu": 5 },
+  "091023": { "status": "planned", "cfu": 5 },
+  "052535": { "status": "planned", "cfu": 5 },
+  "054307": { "status": "planned", "cfu": 5 },
+  "093212": { "status": "passed", "cfu": 5 },
+  "090958": { "status": "planned", "cfu": 5 },
+  "089013": { "status": "planned", "cfu": 5, "note": "valuta se togliere" },
+  "054323": { "status": "interested", "cfu": 5 },
+  "095943": { "status": "interested", "cfu": 5, "note": "valuta se togliere" },
+  "056889": { "status": "excluded", "cfu": 5 },
+  "056890": { "status": "excluded", "cfu": 5 },
+  "097683": { "status": "excluded", "cfu": 5 },
+  "053879": { "status": "excluded", "cfu": 10 },
+  "063501": { "status": "planned", "cfu": 5, "note": "capire la difficoltà" }
+};
+
 // Requisite Set Codes
 const INT1_CODES = new Set([
   "051587", "054083", "054092", "060001", "085900", "088877", "088983",
@@ -85,7 +117,12 @@ function evaluatePlanState(userNotesData) {
   const effectiveLimit3Ai = [];
   const fulfilledObligatory = new Map();
 
+  if (!userNotesData || typeof userNotesData !== 'object') {
+    userNotesData = {};
+  }
+
   for (const [code, val] of Object.entries(userNotesData)) {
+    if (!val || typeof val !== 'object') continue;
     const status = val.status;
     const isPlanned = status === 'planned';
     const isPassed = status === 'passed';
@@ -95,11 +132,13 @@ function evaluatePlanState(userNotesData) {
     let cfu = parseFloat(val.cfu);
     if (isNaN(cfu) || cfu <= 0) {
       // Look up course in MANIFESTO_SECTIONS
-      for (const sec of MANIFESTO_SECTIONS) {
-        const found = sec.rows.find(r => r.code === code);
-        if (found && !isNaN(parseFloat(found.cfu))) {
-          cfu = parseFloat(found.cfu);
-          break;
+      if (typeof MANIFESTO_SECTIONS !== 'undefined') {
+        for (const sec of MANIFESTO_SECTIONS) {
+          const found = sec.rows.find(r => r.code === code);
+          if (found && !isNaN(parseFloat(found.cfu))) {
+            cfu = parseFloat(found.cfu);
+            break;
+          }
         }
       }
     }
